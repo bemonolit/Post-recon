@@ -1,2 +1,2 @@
 # Post-recon
-Post-recon is a post-exploitation toolkit that helps in gathering further info about target network.
+Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering further info about target network.
