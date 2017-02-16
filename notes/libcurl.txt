@@ -1,1 +1,13 @@
-nmake /f Makefile.vc mode=dll VC=14 ENABLE_WINSSL=yes GEN_PDB=no DEBUG=no MACHINE=x86
+==== Build ====
+* Open VS2015 x86 Open Native Tools Command Prompt
+* cd \path\to\Downloads\curl-7.52.1\winbuild\
+
+==== DLL ====
+nmake /f Makefile.vc mode=dll VC=14 ENABLE_SSPI=yes ENABLE_IPV6=no ENABLE_IDN=no ENABLE_WINSSL=yes GEN_PDB=no DEBUG=no MACHINE=x86
+
+==== LIB ====
+nmake /f Makefile.vc mode=static VC=14 ENABLE_SSPI=yes ENABLE_IPV6=no ENABLE_IDN=no ENABLE_WINSSL=yes GEN_PDB=no DEBUG=no MACHINE=x86
+
+==== Builds ====
+* \path\to\Downloads\curl-7.52.1\builds
+
