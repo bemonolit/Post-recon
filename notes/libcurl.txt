@@ -1,0 +1,1 @@
+nmake /f Makefile.vc mode=dll VC=14 ENABLE_WINSSL=yes GEN_PDB=no DEBUG=no MACHINE=x86
