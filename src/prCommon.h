@@ -36,6 +36,9 @@ namespace Common
 	//free a memory block allocated from a heap by the hAlloc
 	void hFree(void *mem);
 
+	//zero a memory block
+	void hZero(void *mem, SIZE_T size);
+
 	//convert wchar* to char*
 	char* WcharToChar(const WCHAR *src, int slen);
 

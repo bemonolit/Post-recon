@@ -86,7 +86,7 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 
 	upload_ctx.lines_read = 0;
 
-	//init common lib and generate message id
+	//init common lib
 	Common::init();
 
 	//build DATE string
@@ -234,6 +234,8 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 	Common::hFree(MSGID);
 	Common::hFree(SUBJECT);
 	Common::hFree(BODY);
+
+	//Common::hZero((void*)password, strlen(password));
 
 	return (res == CURLE_OK ? S_OK : S_FALSE);
 }

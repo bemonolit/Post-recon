@@ -48,6 +48,11 @@ void Common::hFree(void *mem)
 	if (mem) HeapFree(processHeap, 0, mem);
 }
 
+void Common::hZero(void *mem, SIZE_T size)
+{
+	if (mem) SecureZeroMemory(mem, size);
+}
+
 //convert wide char to ascii char
 char* Common::WcharToChar(const WCHAR *src, int slen)
 {
