@@ -1,18 +1,31 @@
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
-#include <curl/curl.h>
+/*
+This file is part of Post-recon
+Copyright (C) 2017 @maldevel
+https://github.com/maldevel/Post-recon
 
-#define FROM    "xxxxxxxxxx@gmail.com"
-#define TO      "yyyyyyyyyy@gmail.com"
-//#define CC      "<info@example.org>"
+Post-recon - post-exploitation reconnaissance toolkit.
 
-typedef struct upload_status {
-	int lines_read;
-}upload_status;
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+For more see the file 'LICENSE' for copying permission.
+*/
+
+#include <Windows.h>
 
 namespace LibCurl
 {
-	size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp);
+	HRESULT SendEmail(const char *from, const char *fromName, const char *to, const char *subject, const char *body, const char *password);
 }

@@ -46,7 +46,7 @@ nmake /f Makefile.vc mode=static VC=14 ENABLE_SSPI=yes ENABLE_IPV6=no ENABLE_IDN
 * GoTo Project -> Properties -> C/C++ -> Preprocessor -> Preprocessor Definitions -> add CURL_STATICLIB
 
 
-### MSVCRT Warning
+### MSVCRT Warning (Debug)
 
 *LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library*
 

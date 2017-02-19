@@ -1,4 +1,29 @@
+/*
+This file is part of Post-recon
+Copyright (C) 2017 @maldevel
+https://github.com/maldevel/Post-recon
+
+Post-recon - post-exploitation reconnaissance toolkit.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+For more see the file 'LICENSE' for copying permission.
+*/
+
 #include "prCommon.h"
+
+#include <time.h>
 #include <wchar.h>
 #include <Strsafe.h>
 
@@ -43,7 +68,7 @@ char* Common::WcharToChar(const WCHAR *src, int slen)
 	return dest;
 }
 
-HRESULT Common::generateMessageID(const char *sender, SIZE_T senderLength, char **messageID)
+HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char **messageID)
 {
 	GUID pGuiId;
 	WCHAR sGuiId[64] = { 0 };
@@ -53,15 +78,18 @@ HRESULT Common::generateMessageID(const char *sender, SIZE_T senderLength, char 
 	char *senderCopy = 0;
 	char domain[50] = { 0 };
 	char *context = 0;
+	char *tmp = 0;
 	char *sTrimIdA = 0;
 	int messageIDSize = 0;
 
 	//copy sender email
-	senderCopy = (char*)hAlloc(senderLength * sizeof(char));
+	senderCopy = (char*)hAlloc((senderLength + 1) * sizeof(char));
 	if (senderCopy == NULL) {
 		return S_FALSE;
 	}
-	if (strncpy_s(senderCopy, senderLength, sender, senderLength) != 0) {
+
+	if (strncpy_s(senderCopy, senderLength + 1, sender, senderLength + 1) != 0) {
+		hFree(senderCopy);
 		return S_FALSE;
 	}
 
@@ -71,19 +99,25 @@ HRESULT Common::generateMessageID(const char *sender, SIZE_T senderLength, char 
 		return S_FALSE;
 	}
 
-	hFree(senderCopy);
-
 	//Get email domain
-	if (strcpy_s(domain, context) != 0) {
+	if ((tmp = strtok_s(NULL, "@", &context)) == NULL) {
+		hFree(senderCopy);
 		return S_FALSE;
 	}
 
-	//Creates a GUID, a unique 128-bit integer.
+	if (strcpy_s(domain, tmp) != 0) {
+		hFree(senderCopy);
+		return S_FALSE;
+	}
+
+	hFree(senderCopy);
+
+	//Create a GUID, a unique 128-bit integer.
 	if (CoCreateGuid(&pGuiId) != S_OK) {
 		return S_FALSE;
 	}
 
-	//Converts a globally unique identifier (GUID) into a string of printable characters.
+	//Convert a globally unique identifier (GUID) into a string of printable characters.
 	if ((strFromGuiSize = StringFromGUID2(pGuiId, sGuiId, _countof(sGuiId))) == 0) {
 		return S_FALSE;
 	}
@@ -95,7 +129,7 @@ HRESULT Common::generateMessageID(const char *sender, SIZE_T senderLength, char 
 
 	sTrimId[strFromGuiSize - 3] = '\0';
 
-	//convert GUID to ascii
+	//Convert GUID to ascii
 	sTrimIdA = WcharToChar(sTrimId, 64);
 	if (sTrimIdA == NULL) {
 		return S_FALSE;
@@ -116,12 +150,50 @@ HRESULT Common::generateMessageID(const char *sender, SIZE_T senderLength, char 
 	}
 
 	//concat @ e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@
-	HRESULT result = StringCbPrintfA(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@");
+	if (StringCbPrintfA(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") != S_OK) {
+		hFree(sTrimIdA);
+		return S_FALSE;
+	}
 
 	//concat domain e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
-	result = StringCbPrintfA(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain);
+	if (StringCbPrintfA(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) != S_OK) {
+		hFree(sTrimIdA);
+		return S_FALSE;
+	}
 
 	hFree(sTrimIdA);
 
 	return S_OK;
 }
+
+char* Common::GetTimezoneOffset(void)
+{
+	struct tm lcl;
+	struct tm gmt;
+
+	char *dateTime = (char*)Common::hAlloc(50 * sizeof(char));
+	if (dateTime == NULL) {
+		return NULL;
+	}
+
+	time_t now = time(NULL);
+
+	if (!now) return NULL;
+
+	localtime_s(&lcl, &now);
+	time_t local = mktime(&lcl);
+
+	if (!local) return NULL;
+
+	gmtime_s(&gmt, &now);
+	time_t utc = mktime(&gmt);
+
+	if (!utc) return NULL;
+
+	if (strftime(dateTime, 50, "%a, %d %b %Y %H:%M:%S %z", &gmt) == 0) {
+		return NULL;
+	}
+
+	return dateTime;
+}
+
