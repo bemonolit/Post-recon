@@ -8,7 +8,7 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 * Turn on "Access for less secure apps" under the security settings of the account. [less secure apps](https://www.google.com/settings/security/lesssecureapps)
 * You may also have to enable IMAP in the account settings.
 * Visual C++ toolset v140 (VS 2015)
-* libcurl 7.52.1 [curl-7.52.1](https://curl.haxx.se/download/curl-7.52.1.zip)
+* libcurl 7.xx.x
 
 
 ### Gmail Servers for libcurl

@@ -24,16 +24,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
+#define TO "kpapadaki4@gmail.com"
+#define FROM "jultorna@gmail.com"
+#define NAME "Joe Doe"
+#define PASSWORD "-Zz'=9H$UWD#Lm':"
+
 int main(void)
 {
-	char FROM[30] = "xxxxxxxxxx@gmail.com";
-	char TO[30] = "yyyyyyyyyy@gmail.com";
-	char fromName[30] = "xxxxx yyyyy";
 	char subject[50] = "Hello there";
 	char body[100] = "Test body\r\nnew line\r\ntest test\r\ntest";
-	char password[50] = "xxxxxyyyyy";
 
-	LibCurl::SendEmail(FROM, fromName, TO, subject, body, password);
+	LibCurl::SendEmail(FROM, NAME, TO, subject, body, PASSWORD);
 
 	return EXIT_SUCCESS;
 }
