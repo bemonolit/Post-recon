@@ -24,10 +24,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#define TO "kpapadaki4@gmail.com"
-#define FROM "jultorna@gmail.com"
+#define TO "xxxxx"
+#define FROM "xxxx"
 #define NAME "Joe Doe"
-#define PASSWORD "-Zz'=9H$UWD#Lm':"
+#define PASSWORD "xxxx"
 
 int main(void)
 {
