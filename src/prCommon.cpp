@@ -50,6 +50,7 @@ void Common::hFree(void *mem)
 
 void Common::hZero(void *mem, SIZE_T size)
 {
+	//Fills a block of memory with zeros. 
 	if (mem) SecureZeroMemory(mem, size);
 }
 
@@ -58,12 +59,16 @@ char* Common::WcharToChar(const WCHAR *src, int slen)
 {
 	int len = 0;
 
+	//Maps a UTF-16 (wide character) string to a new character string. 
+	//The new character string is not necessarily from a multibyte character set. 
+	//return the required buffer size
 	if ((len = WideCharToMultiByte(CP_ACP, 0, src, slen, NULL, 0, NULL, NULL)) == 0) {
 		return NULL;
 	}
 
 	char *dest = (char*)hAlloc((len + 1) * sizeof(char));
 
+	//convert
 	if (WideCharToMultiByte(CP_ACP, 0, src, slen, dest, len, NULL, NULL) == 0) {
 		return NULL;
 	}
@@ -195,6 +200,7 @@ char* Common::GetTimezoneOffset(void)
 
 	if (!utc) return NULL;
 
+	//Mon, 29 Nov 2010 21:54:29 +1100
 	if (strftime(dateTime, 50, "%a, %d %b %Y %H:%M:%S %z", &gmt) == 0) {
 		return NULL;
 	}
