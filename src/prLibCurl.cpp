@@ -227,9 +227,6 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 		return S_FALSE;
 	}
 
-	//_data[0] = (char*)Common::hAlloc(strlen(_DATE) + 1);
-	//strncpy_s(_data[0], strlen(_DATE) + 1, _DATE, strlen(_DATE));
-
 	//build TO string
 	if ((buildTo(to, &_data[1])) == S_FALSE) {
 		Common::hFree(_data);
@@ -254,6 +251,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 		return S_FALSE;
 	}
 
+	//add new line
 	if ((_data[5] = (char*)Common::hAlloc(3 * sizeof(char))) == NULL) {
 		Common::hFree(_data);
 		return S_FALSE;
@@ -264,8 +262,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 		return S_FALSE;
 	}
 
-
-	//build body string
+	// append body
 	if ((buildBody(body, &_data[6])) == S_FALSE) {
 		Common::hFree(_data);
 		return S_FALSE;
@@ -283,25 +280,25 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 	CURLcode res = CURLE_OK;
 	struct curl_slist *recipients = NULL;
 	struct upload_status upload_ctx;
-	char **data = 0;
+	//char **data = 0;
 	int dataSize = 8;
 	int i = 0;
 
 	upload_ctx.lines_read = 0;
 
-	//init common lib
 	Common::init();
 
-	if ((data = (char**)Common::hAlloc(dataSize * sizeof(char*))) == NULL) {
+	if ((_emailHeader = (char**)Common::hAlloc(dataSize * sizeof(char*))) == NULL) {
 		return S_FALSE;
 	}
 
-	buildMessage(data, to, from, fromName, subject, body);
-	_emailHeader = data;
+	buildMessage(_emailHeader, to, from, fromName, subject, body);
+	//_emailHeader = data;
 
 	curl = curl_easy_init();
 
 	if (curl) {
+
 		curl_easy_setopt(curl, CURLOPT_USERNAME, from);
 		curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 		curl_easy_setopt(curl, CURLOPT_URL, "smtp://smtp.gmail.com:587");
@@ -313,19 +310,21 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
 		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); //debug, turn it off on production
+
 		res = curl_easy_perform(curl);
 		if (res != CURLE_OK) {
 			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 		}
+
 		curl_slist_free_all(recipients);
 		curl_easy_cleanup(curl);
 	}
 
 	for (i = 0; i < dataSize; i++) {
-		Common::hFree(data[i]);
+		Common::hFree(_emailHeader[i]);
 	}
 
-	Common::hFree(data);
+	Common::hFree(_emailHeader);
 
 	//Common::hZero((void*)password, strlen(password));
 
