@@ -31,8 +31,10 @@ struct upload_status {
 	int lines_read;
 };
 
-//email 
-static const char *_payload_text[] = {
+// .:: email headers ::.
+
+// simple email
+static const char *_simpleEmailHeader[] = {
 	"Date: %s\r\n",						//e.g. Mon, 29 Nov 2010 21:54:29 +1100
 	"To: %s\r\n",						//e.g. admin@example.org
 	"From: %s(%s)\r\n",					//e.g. support@example.gr(Joe Doe)
@@ -43,8 +45,36 @@ static const char *_payload_text[] = {
 	NULL
 };
 
+// email with attachment
+static const char *_emailWithAttachmentHeader[] = {
+	"Date: %s\r\n",
+	"To: %s\r\n",
+	"From: %s(%s)\r\n",
+	"Message-ID: <%s>\r\n",
+	"Subject: %s\r\n",
+	"MIME-Version: 1.0",
+	"Content-Type: multipart/mixed; boundary=\"%s\"\r\n",
+	"--%s\r\n",
+	"Content-type: text/plain; charset=UTF-8\r\n",
+	"Content-Transfer-Encoding: 7bit\r\n\r\n",
+	"BODY MESSAGE\r\n\r\n",
+	"--%s\r\n",
+	"Content-Type: application/octet-stream;\r\n",
+	"Content-Transfer-Encoding: base64\r\n",
+	"Content-Disposition: attachment; filename=\"%s\"\r\n\r\n",
+	"%s",
+	"\r\n--%s--\r\n",
+	"\r\n.\r\n",
+	NULL
+};
+
+//static char *_activeHeader;
+static char **_emailHeader;
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 //libcurl email callback
-static size_t _payload_source(void *ptr, size_t size, size_t nmemb, void *userp)
+static size_t _read_function_callback(void *ptr, size_t size, size_t nmemb, void *userp)
 {
 	struct upload_status *upload_ctx = (struct upload_status *)userp;
 	const char *data;
@@ -53,7 +83,7 @@ static size_t _payload_source(void *ptr, size_t size, size_t nmemb, void *userp)
 		return 0;
 	}
 
-	data = _payload_text[upload_ctx->lines_read];
+	data = _emailHeader[upload_ctx->lines_read];
 
 	if (data)
 	{
@@ -66,149 +96,212 @@ static size_t _payload_source(void *ptr, size_t size, size_t nmemb, void *userp)
 	return 0;
 }
 
-HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to, const char *subject, const char *body, const char *password)
+//build DATE string
+static HRESULT buildDate(char **result)
+{
+	char *_dateTime = 0;
+	int _size = 0;
+
+	if ((_dateTime = Common::GetTimezoneOffset()) == NULL) {
+		return S_FALSE;
+	}
+
+	_size = strlen(_simpleEmailHeader[0]) + strlen(_dateTime);
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		Common::hFree(_dateTime);
+		return S_FALSE;
+	}
+
+	if (_snprintf_s(*result, _size + 1, _TRUNCATE, _simpleEmailHeader[0], _dateTime) == -1) {
+		Common::hFree(_dateTime);
+		return S_FALSE;
+	}
+
+	Common::hFree(_dateTime);
+	return S_OK;
+}
+
+//build To string
+static HRESULT buildTo(const char *to, char **result)
+{
+	int _size = 0;
+
+	_size = strlen(_simpleEmailHeader[1]) + strlen(to);
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		return S_FALSE;
+	}
+
+	if (_snprintf_s(*result, _size + 1, _TRUNCATE, _simpleEmailHeader[1], to) == -1) {
+		return S_FALSE;
+	}
+
+	return S_OK;
+}
+
+static HRESULT buildFrom(const char *from, const char *name, char **result)
+{
+	int _size = 0;
+
+	_size = strlen(_simpleEmailHeader[2]) + strlen(from) + strlen(name);
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		return S_FALSE;
+	}
+
+	if (_snprintf_s(*result, _size + 1, _TRUNCATE, _simpleEmailHeader[2], from, name) == -1) {
+		return S_FALSE;
+	}
+
+	return S_OK;
+}
+
+//build MessageID string
+static HRESULT buildMessageID(const char *from, char **result)
+{
+	char *_messageID = 0;
+	int _size = 0;
+
+	if ((Common::GenerateMessageID(from, strlen(from), &_messageID)) == S_FALSE) {
+		return S_FALSE;
+	}
+
+	_size = strlen(_simpleEmailHeader[3]) + strlen(_messageID);
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		Common::hFree(_messageID);
+		return S_FALSE;
+	}
+
+	if (_snprintf_s(*result, _size + 1, _TRUNCATE, _simpleEmailHeader[3], _messageID) == -1) {
+		Common::hFree(_messageID);
+		return S_FALSE;
+	}
+
+	Common::hFree(_messageID);
+	return S_OK;
+}
+
+//build subject string
+static HRESULT buildSubject(const char *subject, char **result)
+{
+	int _size = 0;
+
+	_size = strlen(_simpleEmailHeader[4]) + strlen(subject);
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		return S_FALSE;
+	}
+
+	if (_snprintf_s(*result, _size + 1, _TRUNCATE, _simpleEmailHeader[4], subject) == -1) {
+		return S_FALSE;
+	}
+
+	return S_OK;
+}
+
+//build body string
+static HRESULT buildBody(const char *body, char **result)
+{
+	int _size = 0;
+
+	_size = strlen(_simpleEmailHeader[6]) + strlen(body);
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		return S_FALSE;
+	}
+
+	if (_snprintf_s(*result, _size + 1, _TRUNCATE, _simpleEmailHeader[6], body) == -1) {
+		return S_FALSE;
+	}
+
+	return S_OK;
+}
+
+//build email message
+static HRESULT buildMessage(char **_data, const char *to, const char *from, const char *fromName, const char *subject, const char *body)
+{
+	//build DATE string
+	if ((buildDate(&_data[0])) == S_FALSE) {
+		return S_FALSE;
+	}
+
+	//_data[0] = (char*)Common::hAlloc(strlen(_DATE) + 1);
+	//strncpy_s(_data[0], strlen(_DATE) + 1, _DATE, strlen(_DATE));
+
+	//build TO string
+	if ((buildTo(to, &_data[1])) == S_FALSE) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+	//build FROM string
+	if ((buildFrom(from, fromName, &_data[2])) == S_FALSE) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+	//build messageid string
+	if ((buildMessageID(from, &_data[3])) == S_FALSE) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+	//build subject string
+	if ((buildSubject(subject, &_data[4])) == S_FALSE) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+	if ((_data[5] = (char*)Common::hAlloc(3 * sizeof(char))) == NULL) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+	if (strncpy_s(_data[5], 3, "\r\n", 2) != 0) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+
+	//build body string
+	if ((buildBody(body, &_data[6])) == S_FALSE) {
+		Common::hFree(_data);
+		return S_FALSE;
+	}
+
+	_data[7] = NULL;
+
+	return S_OK;
+}
+
+HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to,
+	const char *subject, const char *body, const char *password, int sendAttachment, const char *filename)
 {
 	CURL *curl;
 	CURLcode res = CURLE_OK;
 	struct curl_slist *recipients = NULL;
 	struct upload_status upload_ctx;
-
-	char *messageID = 0;
-	char *dateTime = 0;
-	int size = 0;
-
-	char *MSGID = 0;
-	char *DATE = 0;
-	char *TO = 0;
-	char *FROM = 0;
-	char *SUBJECT = 0;
-	char *BODY = 0;
+	char **data = 0;
+	int dataSize = 8;
+	int i = 0;
 
 	upload_ctx.lines_read = 0;
 
 	//init common lib
 	Common::init();
 
-	//build DATE string
-	dateTime = Common::GetTimezoneOffset();
-	size = strlen(_payload_text[0]) + strlen(dateTime);
-	DATE = (char*)Common::hAlloc((size + 1) * sizeof(char));
-	if (DATE == NULL) {
-		Common::hFree(dateTime);
+	if ((data = (char**)Common::hAlloc(dataSize * sizeof(char*))) == NULL) {
 		return S_FALSE;
 	}
-	if (StringCbPrintfA(DATE, size + 1, _payload_text[0], dateTime) != S_OK) {
-		Common::hFree(dateTime);
-		Common::hFree(DATE);
-		return S_FALSE;
-	}
-	Common::hFree(dateTime);
-	_payload_text[0] = DATE;
 
-
-	//build TO string
-	size = strlen(_payload_text[1]) + strlen(to);
-	TO = (char*)Common::hAlloc((size + 1) * sizeof(char));
-	if (TO == NULL) {
-		Common::hFree(DATE);
-		return S_FALSE;
-	}
-	if (StringCbPrintfA(TO, size + 1, _payload_text[1], to) != S_OK) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		return S_FALSE;
-	}
-	_payload_text[1] = TO;
-
-
-	//build FROM string
-	size = strlen(_payload_text[2]) + strlen(from) + strlen(fromName);
-	FROM = (char*)Common::hAlloc((size + 1) * sizeof(char));
-	if (FROM == NULL) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		return S_FALSE;
-	}
-	if (StringCbPrintfA(FROM, size + 1, _payload_text[2], from, fromName) != S_OK) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		return S_FALSE;
-	}
-	_payload_text[2] = FROM;
-
-
-	//build messageid string
-	Common::GenerateMessageID(from, strlen(from), &messageID);
-
-	size = strlen(_payload_text[3]) + strlen(messageID);
-	MSGID = (char*)Common::hAlloc((size + 1) * sizeof(char));
-	if (MSGID == NULL) {
-		Common::hFree(messageID);
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		return S_FALSE;
-	}
-	if (StringCbPrintfA(MSGID, size + 1, _payload_text[3], messageID) != S_OK) {
-		Common::hFree(messageID);
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		Common::hFree(MSGID);
-		return S_FALSE;
-	}
-	Common::hFree(messageID);
-	_payload_text[3] = MSGID;
-
-
-	//build subject string
-	size = strlen(_payload_text[4]) + strlen(subject);
-	SUBJECT = (char*)Common::hAlloc((size + 1) * sizeof(char));
-	if (SUBJECT == NULL) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		Common::hFree(MSGID);
-		return S_FALSE;
-	}
-	if (StringCbPrintfA(SUBJECT, size + 1, _payload_text[4], subject) != S_OK) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		Common::hFree(MSGID);
-		Common::hFree(SUBJECT);
-		return S_FALSE;
-	}
-	_payload_text[4] = SUBJECT;
-
-
-	//build body string
-	size = strlen(_payload_text[6]) + strlen(body);
-	BODY = (char*)Common::hAlloc((size + 1) * sizeof(char));
-	if (BODY == NULL) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		Common::hFree(MSGID);
-		Common::hFree(SUBJECT);
-		return S_FALSE;
-	}
-	if (StringCbPrintfA(BODY, size + 1, _payload_text[6], body) != S_OK) {
-		Common::hFree(DATE);
-		Common::hFree(TO);
-		Common::hFree(FROM);
-		Common::hFree(MSGID);
-		Common::hFree(SUBJECT);
-		Common::hFree(BODY);
-		return S_FALSE;
-	}
-	_payload_text[6] = BODY;
-
+	buildMessage(data, to, from, fromName, subject, body);
+	_emailHeader = data;
 
 	curl = curl_easy_init();
-	if (curl)
-	{
+
+	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_USERNAME, from);
 		curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 		curl_easy_setopt(curl, CURLOPT_URL, "smtp://smtp.gmail.com:587");
@@ -216,7 +309,7 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 		curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
 		recipients = curl_slist_append(recipients, to);
 		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
-		curl_easy_setopt(curl, CURLOPT_READFUNCTION, _payload_source);
+		curl_easy_setopt(curl, CURLOPT_READFUNCTION, _read_function_callback);
 		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
 		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); //debug, turn it off on production
@@ -228,12 +321,11 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 		curl_easy_cleanup(curl);
 	}
 
-	Common::hFree(DATE);
-	Common::hFree(TO);
-	Common::hFree(FROM);
-	Common::hFree(MSGID);
-	Common::hFree(SUBJECT);
-	Common::hFree(BODY);
+	for (i = 0; i < dataSize; i++) {
+		Common::hFree(data[i]);
+	}
+
+	Common::hFree(data);
 
 	//Common::hZero((void*)password, strlen(password));
 

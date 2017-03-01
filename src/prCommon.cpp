@@ -45,7 +45,10 @@ void* Common::hAlloc(SIZE_T size)
 void Common::hFree(void *mem)
 {
 	//free a memory block allocated from a heap by the HeapAlloc
-	if (mem) HeapFree(processHeap, 0, mem);
+	if (mem) {
+		HeapFree(processHeap, 0, mem);
+		mem = NULL;
+	}
 }
 
 void Common::hZero(void *mem, SIZE_T size)
@@ -98,7 +101,7 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 		return S_FALSE;
 	}
 
-	if (strncpy_s(senderCopy, senderLength + 1, sender, senderLength + 1) != 0) {
+	if (strncpy_s(senderCopy, senderLength + 1, sender, senderLength) != 0) {
 		hFree(senderCopy);
 		return S_FALSE;
 	}
@@ -154,19 +157,22 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 	}
 
 	//copy trimmed guid to messageid e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	if (StringCbPrintfA(*messageID, messageIDSize, "%s", sTrimIdA) != S_OK) {
+	//if (StringCbPrintfA(*messageID, messageIDSize, "%s", sTrimIdA) != S_OK) {
+	if (_snprintf_s(*messageID, messageIDSize, _TRUNCATE, "%s", sTrimIdA) == -1) {
 		hFree(sTrimIdA);
 		return S_FALSE;
 	}
 
 	//concat @ e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@
-	if (StringCbPrintfA(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") != S_OK) {
+	//if (StringCbPrintfA(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") != S_OK) {
+	if (_snprintf_s(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), _TRUNCATE, "%s", "@") == -1) {
 		hFree(sTrimIdA);
 		return S_FALSE;
 	}
 
 	//concat domain e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
-	if (StringCbPrintfA(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) != S_OK) {
+	//if (StringCbPrintfA(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) != S_OK) {
+	if (_snprintf_s(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, _TRUNCATE, "%s", domain) == -1) {
 		hFree(sTrimIdA);
 		return S_FALSE;
 	}

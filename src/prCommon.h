@@ -25,6 +25,9 @@ For more see the file 'LICENSE' for copying permission.
 
 #include <windows.h>
 
+#define TRUE 1
+#define FALSE 0
+
 namespace Common
 {
 	//initialize common lib stuff
