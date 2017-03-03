@@ -17,11 +17,36 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 * smtps://smtp.gmail.com:465	(465/SSL)
 
 
+### Disable protocols
+
+* Open file \path\to\Downloads\curl-7.52.1\lib\config-win32.h for editing.
+* Append the following code, before last endif line. (*#endif /* HEADER_CURL_CONFIG_WIN32_H */*):
+
+```cpp
+/* ---------------------------------------------------------------- */
+/*                       DISABLE PROTOCOLS                          */
+/* ---------------------------------------------------------------- */
+
+//#define HTTP_ONLY
+#define CURL_DISABLE_FTP disables FTP
+#define CURL_DISABLE_LDAP disables LDAP
+#define CURL_DISABLE_TELNET disables TELNET
+#define CURL_DISABLE_DICT disables DICT
+#define CURL_DISABLE_FILE disables FILE
+#define CURL_DISABLE_TFTP disables TFTP
+#define CURL_DISABLE_HTTP disables HTTP
+#define CURL_DISABLE_IMAP disables IMAP
+#define CURL_DISABLE_POP3 disables POP3
+//#define CURL_DISABLE_SMTP
+```
+
+
 ### Build libcurl for Windows
 
-```bash
 * Open VS2015 x86 Open Native Tools Command Prompt
-* cd \path\to\Downloads\curl-7.52.1\winbuild\
+
+```bash
+cd \path\to\Downloads\curl-7.52.1\winbuild\
 ```
 
 #### Build DLL
@@ -51,4 +76,5 @@ nmake /f Makefile.vc mode=static VC=14 ENABLE_SSPI=yes ENABLE_IPV6=no ENABLE_IDN
 *LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library*
 
 * GoTo Project -> Properties -> Linker -> Input -> Ignore Specific Default Libraries -> add MSVCRT.lib
+
 
