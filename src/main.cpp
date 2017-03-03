@@ -25,10 +25,10 @@ For more see the file 'LICENSE' for copying permission.
 */
 
 #define TO "xxxxxx@gmail.com"
-#define FROM "yyyyyy@gmail.com"
+#define FROM "yyyyyyy@gmail.com"
 #define FromNAME "yyyyyy"
 #define ToNAME "xxxxx"
-#define PASSWORD "xxxxxxxxxxxx"
+#define PASSWORD "eeeeeeeee"
 
 int main(void)
 {
