@@ -11,7 +11,7 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 * libcurl 7.xx.x
 
 
-### Gmail Servers for libcurl
+### Gmail servers for libcurl
 
 * smtp://smtp.gmail.com:587		(25,587/TLS)
 * smtps://smtp.gmail.com:465	(465/SSL)
