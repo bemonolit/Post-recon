@@ -19,7 +19,7 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 
 ### Disable protocols
 
-* Open file \path\to\Downloads\curl-7.52.1\lib\config-win32.h for editing.
+* Open file \curl\lib\config-win32.h for editing.
 * Append the following code, before last endif line. (*#endif /* HEADER_CURL_CONFIG_WIN32_H */*):
 
 ```cpp
@@ -43,10 +43,10 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 
 ### Build libcurl for Windows
 
-* Open VS2015 x86 Open Native Tools Command Prompt
+* Open VS2015 x86 Open Native Tools Command Prompt.
 
 ```bash
-cd \path\to\Downloads\curl-7.52.1\winbuild\
+cd \curl\winbuild\
 ```
 
 #### Build DLL
@@ -63,18 +63,19 @@ nmake /f Makefile.vc mode=static VC=14 ENABLE_SSPI=yes ENABLE_IPV6=no ENABLE_IDN
 
 #### Output path
 
-*\path\to\Downloads\curl-7.52.1\builds*
+* \curl\builds\
+
 
 #### CURL_STATICLIB
 
 * Add CURL_STATICLIB definition
-* GoTo Project -> Properties -> C/C++ -> Preprocessor -> Preprocessor Definitions -> add CURL_STATICLIB
+* GoTo Post-recon Project -> Properties -> C/C++ -> Preprocessor -> Preprocessor Definitions -> add CURL_STATICLIB
 
 
 ### MSVCRT Warning (Debug)
 
 *LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library*
 
-* GoTo Project -> Properties -> Linker -> Input -> Ignore Specific Default Libraries -> add MSVCRT.lib
+* GoTo Post-recon Project -> Properties -> Linker -> Input -> Ignore Specific Default Libraries -> add MSVCRT.lib
 
 
