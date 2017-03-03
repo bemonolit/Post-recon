@@ -50,4 +50,10 @@ namespace Common
 
 	//get date, time and timezone offset
 	char *GetTimezoneOffset(void);
+
+	//copies characters of one string to another
+	int CopyString(char *destination, size_t sizeInBytes, const char *source);
+
+	//Writes formatted data to a string
+	int FormatString(const char *buffer, const size_t sizeOfBuffer, char const* const format, ...);
 }

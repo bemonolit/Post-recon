@@ -89,6 +89,7 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 
 	int strFromGuiSize = 0;
 	char *senderCopy = 0;
+	int domainSize = 50;
 	char domain[50] = { 0 };
 	char *context = 0;
 	char *tmp = 0;
@@ -101,7 +102,7 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 		return S_FALSE;
 	}
 
-	if (strncpy_s(senderCopy, senderLength + 1, sender, senderLength) != 0) {
+	if (Common::CopyString(senderCopy, senderLength + 1, sender) != 0) {
 		hFree(senderCopy);
 		return S_FALSE;
 	}
@@ -118,7 +119,7 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 		return S_FALSE;
 	}
 
-	if (strcpy_s(domain, tmp) != 0) {
+	if (Common::CopyString(domain, domainSize, tmp) != 0) {
 		hFree(senderCopy);
 		return S_FALSE;
 	}
@@ -214,3 +215,9 @@ char* Common::GetTimezoneOffset(void)
 	return dateTime;
 }
 
+int Common::CopyString(char *destination, size_t sizeInBytes, const char *source)
+{
+	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return EINVAL;
+
+	return strncpy_s(destination, sizeInBytes, source, _TRUNCATE);
+}

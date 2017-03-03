@@ -24,11 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#define TO "xxxxxx@gmail.com"
-#define FROM "yyyyyyy@gmail.com"
-#define FromNAME "yyyyyy"
-#define ToNAME "xxxxx"
-#define PASSWORD "eeeeeeeee"
+#define TO "xxxxx@gmail.com"
+#define FROM "yyyyy@gmail.com"
+#define FromNAME "xxxxxx"
+#define ToNAME "yyyyy"
+#define PASSWORD "zzzzzzzzz"
 
 int main(void)
 {

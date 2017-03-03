@@ -209,10 +209,6 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 		Common::hFree(_data);
 		return S_FALSE;
 	}
-	/*if ((buildString(emailHeader[1], to, &_data[1])) == S_FALSE) {
-		Common::hFree(_data);
-		return S_FALSE;
-	}*/
 
 	//build FROM string
 	if ((buildToFrom(emailHeader[2], from, fromName, &_data[2])) == S_FALSE) {
@@ -240,7 +236,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 			return S_FALSE;
 		}
 
-		if (strncpy_s(_data[5], (strlen(emailHeader[5]) + 1), emailHeader[5], strlen(emailHeader[5])) != 0) {
+		if (Common::CopyString(_data[5], (strlen(emailHeader[5]) + 1), emailHeader[5]) != 0) {
 			Common::hFree(_data);
 			return S_FALSE;
 		}
@@ -260,7 +256,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 			return S_FALSE;
 		}
 
-		if (strncpy_s(_data[5], (strlen(emailHeader[5]) + 1), emailHeader[5], strlen(emailHeader[5])) != 0) {
+		if (Common::CopyString(_data[5], (strlen(emailHeader[5]) + 1), emailHeader[5]) != 0) {
 			Common::hFree(_data);
 			return S_FALSE;
 		}
@@ -283,7 +279,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 			return S_FALSE;
 		}
 
-		if (strncpy_s(_data[8], (strlen(emailHeader[8]) + 1), emailHeader[8], strlen(emailHeader[8])) != 0) {
+		if (Common::CopyString(_data[8], (strlen(emailHeader[8]) + 1), emailHeader[8]) != 0) {
 			Common::hFree(_data);
 			return S_FALSE;
 		}
@@ -294,7 +290,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 			return S_FALSE;
 		}
 
-		if (strncpy_s(_data[9], (strlen(emailHeader[9]) + 1), emailHeader[9], strlen(emailHeader[9])) != 0) {
+		if (Common::CopyString(_data[9], (strlen(emailHeader[9]) + 1), emailHeader[9]) != 0) {
 			Common::hFree(_data);
 			return S_FALSE;
 		}
@@ -323,7 +319,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 			return S_FALSE;
 		}
 
-		if (strncpy_s(_data[13], (strlen(emailHeader[13]) + 1), emailHeader[13], strlen(emailHeader[13])) != 0) {
+		if (Common::CopyString(_data[13], (strlen(emailHeader[13]) + 1), emailHeader[13]) != 0) {
 			Common::hFree(_data);
 			return S_FALSE;
 		}
