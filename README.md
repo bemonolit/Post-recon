@@ -2,6 +2,7 @@
 Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering further info about target network.
 
 
+
 ### Requirements
 
 * A Gmail account (Use a dedicated account! Do not use your personal one!)
@@ -11,10 +12,12 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 * libcurl 7.xx.x
 
 
+
 ### Gmail servers for libcurl
 
 * smtp://smtp.gmail.com:587		(25,587/TLS)
 * smtps://smtp.gmail.com:465	(465/SSL)
+
 
 
 ### Disable protocols
@@ -39,6 +42,7 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 #define CURL_DISABLE_POP3 disables POP3
 //#define CURL_DISABLE_SMTP
 ```
+
 
 
 ### Build libcurl for Windows
@@ -70,6 +74,7 @@ nmake /f Makefile.vc mode=static VC=14 ENABLE_SSPI=yes ENABLE_IPV6=no ENABLE_IDN
 
 * Add CURL_STATICLIB definition
 * GoTo Post-recon Project -> Properties -> C/C++ -> Preprocessor -> Preprocessor Definitions -> add CURL_STATICLIB
+
 
 
 ### MSVCRT Warning (Debug)

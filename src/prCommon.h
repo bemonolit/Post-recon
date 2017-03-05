@@ -55,5 +55,11 @@ namespace Common
 	int CopyString(char *destination, size_t sizeInBytes, const char *source);
 
 	//Writes formatted data to a string
-	int FormatString(const char *buffer, const size_t sizeOfBuffer, char const* const format, ...);
+	int FormatString(char *buffer, const size_t sizeOfBuffer, char const* const format, ...);
+
+	//load file into memory
+	unsigned long LoadFileIntoMemory(const char *filename, unsigned char **data);
+
+	//convert byte array to base64 string
+	unsigned long Base64Encode(const unsigned char *data, unsigned long size, char **str);
 }

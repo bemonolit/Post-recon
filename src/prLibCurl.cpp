@@ -33,9 +33,14 @@ struct upload_status {
 	int lines_read;
 };
 
+//struct upload_status {
+//	char *data;
+//	size_t bytesLeft;
+//};
+
 //static char *_activeHeader;
 static char **_emailHeader;
-
+static int base64DataSize = 0;
 
 // .:: email headers ::.
 
@@ -76,17 +81,19 @@ static const char *emailWithAttachmentHeader[] = {
 
 // :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+
 //libcurl email callback
 static size_t _read_function_callback(void *ptr, size_t size, size_t nmemb, void *userp)
 {
 	struct upload_status *upload_ctx = (struct upload_status *)userp;
 	const char *data;
 
-	if ((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
+	if ((size == 0) || (nmemb == 0) || ((size*nmemb) < 1) /*|| (bytesLeft == 0)*/) {
 		return 0;
 	}
 
 	data = _emailHeader[upload_ctx->lines_read];
+	//size_t len = strlen(data);
 
 	if (data)
 	{
@@ -96,12 +103,22 @@ static size_t _read_function_callback(void *ptr, size_t size, size_t nmemb, void
 		return len;
 	}
 
+	/*if (data && (nmemb * size) >= len)
+	{
+		bytesLeft = 0;
+		memcpy(ptr, data, len);
+		upload_ctx->lines_read++;
+		return len;
+	}*/
+
 	return 0;
 }
 
 //build DATE string
 static HRESULT buildDate(const char *format, char **result)
 {
+	if (format == NULL) return S_FALSE;
+
 	char *_dateTime = 0;
 	int _size = 0;
 
@@ -116,7 +133,7 @@ static HRESULT buildDate(const char *format, char **result)
 		return S_FALSE;
 	}
 
-	if (_snprintf_s(*result, _size + 1, _TRUNCATE, format, _dateTime) == -1) {
+	if (Common::FormatString(*result, _size + 1, format, _dateTime) == -1) {
 		Common::hFree(_dateTime);
 		return S_FALSE;
 	}
@@ -128,6 +145,8 @@ static HRESULT buildDate(const char *format, char **result)
 //build to and from strings
 static HRESULT buildToFrom(const char *format, const char *tofrom, const char *name, char **result)
 {
+	if (format == NULL || tofrom == NULL || name == NULL) return S_FALSE;
+
 	int _size = 0;
 
 	_size = strlen(format) + strlen(tofrom) + strlen(name);
@@ -136,7 +155,7 @@ static HRESULT buildToFrom(const char *format, const char *tofrom, const char *n
 		return S_FALSE;
 	}
 
-	if (_snprintf_s(*result, _size + 1, _TRUNCATE, format, tofrom, name) == -1) {
+	if (Common::FormatString(*result, _size + 1, format, tofrom, name) == -1) {
 		return S_FALSE;
 	}
 
@@ -146,6 +165,8 @@ static HRESULT buildToFrom(const char *format, const char *tofrom, const char *n
 //build MessageID string
 static HRESULT buildMessageID(const char *format, const char *from, char **result)
 {
+	if (format == NULL || from == NULL)return S_FALSE;
+
 	char *_messageID = 0;
 	int _size = 0;
 
@@ -160,7 +181,7 @@ static HRESULT buildMessageID(const char *format, const char *from, char **resul
 		return S_FALSE;
 	}
 
-	if (_snprintf_s(*result, _size + 1, _TRUNCATE, format, _messageID) == -1) {
+	if (Common::FormatString(*result, _size + 1, format, _messageID) == -1) {
 		Common::hFree(_messageID);
 		return S_FALSE;
 	}
@@ -169,9 +190,50 @@ static HRESULT buildMessageID(const char *format, const char *from, char **resul
 	return S_OK;
 }
 
+//build attachment data
+static HRESULT buildAttachmentData(const char *format, const char *filepath, char **result)
+{
+	if (format == NULL || filepath == NULL) return S_FALSE;
+
+	int _size = 0;
+	int dataSize = 0;
+	unsigned char *data = 0;
+	char *base64Data = 0;
+
+	//read file
+	if ((dataSize = Common::LoadFileIntoMemory(filepath, &data)) == -1) {
+		return S_FALSE;
+	}
+
+	//convert file to base64 string
+	if ((base64DataSize = Common::Base64Encode(data, dataSize, &base64Data)) == -1) {
+		Common::hFree(data);
+		return S_FALSE;
+	}
+
+	Common::hFree(data);
+	_size = strlen(format) + base64DataSize;
+
+	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
+		Common::hFree(base64Data);
+		return S_FALSE;
+	}
+
+	if (Common::FormatString(*result, _size + 1, format, base64Data) == -1) {
+		Common::hFree(base64Data);
+		return S_FALSE;
+	}
+
+	Common::hFree(base64Data);
+
+	return S_OK;
+}
+
 //build string
 static HRESULT buildString(const char *format, const char *value, char **result)
 {
+	if (format == NULL || value == NULL)return S_FALSE;
+
 	int _size = 0;
 
 	_size = strlen(format) + strlen(value);
@@ -180,7 +242,7 @@ static HRESULT buildString(const char *format, const char *value, char **result)
 		return S_FALSE;
 	}
 
-	if (_snprintf_s(*result, _size + 1, _TRUNCATE, format, value) == -1) {
+	if (Common::FormatString(*result, _size + 1, format, value) == -1) {
 		return S_FALSE;
 	}
 
@@ -189,15 +251,9 @@ static HRESULT buildString(const char *format, const char *value, char **result)
 
 //build email message
 static HRESULT buildMessage(char **_data, const char *to, const char *from, const char *fromName, const char *toName, const char *subject,
-	const char *body, const char **emailHeader, int sendAttachment, const char *filename)
+	const char *body, const char **emailHeader, int sendAttachment, const char *filepath, const char *filename)
 {
-	const char *filedata = "N3q8ryccAATKMufsDgEAAAAAAABaAAAAAAAAANTsMtPyl90BBl0AOhlKzhz8LXNismReBeRc94n7"
-		"JjPS4uLoVZjnCsO6vqS60N2htjgEx+0mNprqA4cRM3OXzdslLtp4j1qceLxk63zqTfY8XAUIPmgf"
-		"dWpHZpIF6YqRayErxMhkYYFkdMxVHjCrFk9qOrEkUy5Cxt2d/dYleFn4C83/lShGD6n8fN77mjAu"
-		"VsCPhfODgcBlxCVT+PWRNjEFpbDub8FwTUcM0ZERqq1gHbrOsScYXFmG6WZSWL7pdqxZ5OVbBQj5"
-		"x9qt/PtSK3TNHlsgQvndUz34KWQJO4DLKmzftTvwxL0uX6oPPktmQpATDv8Qk/hxeFn4C83/lShG"
-		"D6n8fN77mjAuVrnk7O6gAAABBAYAAQmBDgAHCwEAASEhAREM0t6XAAgKAUvwcv8AAAUBGQkAAAAA"
-		"AAAAAAAREwB0AGUAcwB0AC4AdAB4AHQAAAAZABQKAQCLR9R6uZLSARUGAQAgAAAAAAA=";
+	if (from == NULL || fromName == NULL || to == NULL || toName == NULL || subject == NULL || body == NULL || emailHeader == NULL) return S_FALSE;
 
 	//build DATE string
 	if ((buildDate(emailHeader[0], &_data[0])) == S_FALSE) {
@@ -331,7 +387,7 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 		}
 
 		//base64 data
-		if ((buildString(emailHeader[15], filedata, &_data[15])) == S_FALSE) {
+		if ((buildAttachmentData(emailHeader[15], filepath, &_data[15])) == S_FALSE) {
 			Common::hFree(_data);
 			return S_FALSE;
 		}
@@ -347,9 +403,11 @@ static HRESULT buildMessage(char **_data, const char *to, const char *from, cons
 	return S_OK;
 }
 
-HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to, const char *toName,
-	const char *subject, const char *body, const char *password, int sendAttachment, const char *filename)
+HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to, const char *toName, const char *subject,
+	const char *body, const char *password, int sendAttachment, const char *filepath, const char *filename)
 {
+	if (from == NULL || fromName == NULL || to == NULL || toName == NULL || subject == NULL || body == NULL || password == NULL) return S_FALSE;
+
 	CURL *curl;
 	CURLcode res = CURLE_OK;
 	struct curl_slist *recipients = NULL;
@@ -370,10 +428,10 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 	}
 
 	if (sendAttachment == FALSE) {
-		buildMessage(_emailHeader, to, from, fromName, toName, subject, body, simpleEmailHeader, FALSE, filename);
+		buildMessage(_emailHeader, to, from, fromName, toName, subject, body, simpleEmailHeader, FALSE, filepath, filename);
 	}
 	else {
-		buildMessage(_emailHeader, to, from, fromName, toName, subject, body, emailWithAttachmentHeader, TRUE, filename);
+		buildMessage(_emailHeader, to, from, fromName, toName, subject, body, emailWithAttachmentHeader, TRUE, filepath, filename);
 	}
 
 	curl = curl_easy_init();
@@ -387,16 +445,15 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 		curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
 		recipients = curl_slist_append(recipients, to);
 		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+		/*if (base64DataSize > CURLOPT_INFILESIZE_LARGE)
+			curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, base64DataSize * 2);*/
 		curl_easy_setopt(curl, CURLOPT_READFUNCTION, _read_function_callback);
 		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
 		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); //debug, turn it off on production
 
 		res = curl_easy_perform(curl);
-		if (res != CURLE_OK) {
-			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-		}
-
+		//if (res != CURLE_OK) {}
 		curl_slist_free_all(recipients);
 		curl_easy_cleanup(curl);
 	}
