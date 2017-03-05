@@ -230,6 +230,14 @@ int Common::CopyString(char *destination, size_t sizeInBytes, const char *source
 	return strncpy_s(destination, sizeInBytes, source, _TRUNCATE);
 }
 
+//concat strings
+HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *source)
+{
+	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return S_FALSE;
+
+	return strncat_s(destination, sizeInBytes, source, _TRUNCATE) == 0 ? S_OK : S_FALSE;
+}
+
 //format string
 int Common::FormatString(char *destination, const size_t sizeInBytes, char const* const format, ...)
 {

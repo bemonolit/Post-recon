@@ -28,24 +28,17 @@ For more see the file 'LICENSE' for copying permission.
 #include <Strsafe.h>
 
 #define BOUNDARY	"EEmmaaiill__BBoouunnddaarryy"
+#define SIZE 4096
 
 struct upload_status {
-	int lines_read;
+	char *data;
+	int dataLeft;
 };
-
-//struct upload_status {
-//	char *data;
-//	size_t bytesLeft;
-//};
-
-//static char *_activeHeader;
-static char **_emailHeader;
-static int base64DataSize = 0;
 
 // .:: email headers ::.
 
 // simple email
-#define SimpleEmailHeaderSize	7
+#define SimpleEmailHeaderLines	7
 static const char *simpleEmailHeader[] = {
 	"Date: %s\r\n",						//e.g. Mon, 29 Nov 2010 21:54:29 +1100
 	"To: %s (%s)\r\n",					//e.g. admin@example.org
@@ -57,7 +50,7 @@ static const char *simpleEmailHeader[] = {
 };
 
 // email with attachment
-#define AttachmentEmailHeaderSize	17
+#define AttachmentEmailHeaderLines	17
 static const char *emailWithAttachmentHeader[] = {
 	"Date: %s\r\n",
 	"To: %s (%s)\r\n",
@@ -86,129 +79,126 @@ static const char *emailWithAttachmentHeader[] = {
 static size_t _read_function_callback(void *ptr, size_t size, size_t nmemb, void *userp)
 {
 	struct upload_status *upload_ctx = (struct upload_status *)userp;
-	const char *data;
+	int dataLen = 0;
 
-	if ((size == 0) || (nmemb == 0) || ((size*nmemb) < 1) /*|| (bytesLeft == 0)*/) {
+	if ((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
 		return 0;
 	}
 
-	data = _emailHeader[upload_ctx->lines_read];
-	//size_t len = strlen(data);
+	if (upload_ctx->dataLeft) {
+		if (upload_ctx->dataLeft > SIZE) {
+			dataLen = SIZE;
+		}
+		else {
+			dataLen = upload_ctx->dataLeft;
+		}
 
-	if (data)
-	{
-		size_t len = strlen(data);
-		memcpy(ptr, data, len);
-		upload_ctx->lines_read++;
-		return len;
+		memcpy(ptr, upload_ctx->data, dataLen);
+		upload_ctx->data += dataLen;
+		upload_ctx->dataLeft -= dataLen;
+
+		return dataLen;
 	}
-
-	/*if (data && (nmemb * size) >= len)
-	{
-		bytesLeft = 0;
-		memcpy(ptr, data, len);
-		upload_ctx->lines_read++;
-		return len;
-	}*/
 
 	return 0;
 }
 
 //build DATE string
-static HRESULT buildDate(const char *format, char **result)
+static int buildDate(const char *format, char **result)
 {
-	if (format == NULL) return S_FALSE;
+	if (format == NULL) return -1;
 
 	char *_dateTime = 0;
 	int _size = 0;
 
 	if ((_dateTime = Common::GetTimezoneOffset()) == NULL) {
-		return S_FALSE;
+		return -1;
 	}
 
 	_size = strlen(format) + strlen(_dateTime);
 
 	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
 		Common::hFree(_dateTime);
-		return S_FALSE;
+		return -1;
 	}
 
 	if (Common::FormatString(*result, _size + 1, format, _dateTime) == -1) {
 		Common::hFree(_dateTime);
-		return S_FALSE;
+		return -1;
 	}
 
 	Common::hFree(_dateTime);
-	return S_OK;
+	return _size;
 }
 
 //build to and from strings
-static HRESULT buildToFrom(const char *format, const char *tofrom, const char *name, char **result)
+static int buildToFrom(const char *format, const char *tofrom, const char *name, char **result)
 {
-	if (format == NULL || tofrom == NULL || name == NULL) return S_FALSE;
+	if (format == NULL || tofrom == NULL || name == NULL) return -1;
 
 	int _size = 0;
 
 	_size = strlen(format) + strlen(tofrom) + strlen(name);
 
 	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
-		return S_FALSE;
+		return -1;
 	}
 
 	if (Common::FormatString(*result, _size + 1, format, tofrom, name) == -1) {
-		return S_FALSE;
+		return -1;
 	}
 
-	return S_OK;
+	return _size;
 }
 
 //build MessageID string
-static HRESULT buildMessageID(const char *format, const char *from, char **result)
+static int buildMessageID(const char *format, const char *from, char **result)
 {
-	if (format == NULL || from == NULL)return S_FALSE;
+	if (format == NULL || from == NULL) return -1;
 
 	char *_messageID = 0;
 	int _size = 0;
 
 	if ((Common::GenerateMessageID(from, strlen(from), &_messageID)) == S_FALSE) {
-		return S_FALSE;
+		return -1;
 	}
 
 	_size = strlen(format) + strlen(_messageID);
 
 	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
 		Common::hFree(_messageID);
-		return S_FALSE;
+		return -1;
 	}
 
 	if (Common::FormatString(*result, _size + 1, format, _messageID) == -1) {
 		Common::hFree(_messageID);
-		return S_FALSE;
+		return -1;
 	}
 
 	Common::hFree(_messageID);
-	return S_OK;
+	return _size;
 }
 
 //build attachment data
-static HRESULT buildAttachmentData(const char *format, const char *filepath, char **result)
+static int buildAttachmentData(const char *format, const char *filepath, char **result)
 {
-	if (format == NULL || filepath == NULL) return S_FALSE;
+	if (format == NULL || filepath == NULL) return -1;
 
 	int _size = 0;
 	int dataSize = 0;
 	unsigned char *data = 0;
 	char *base64Data = 0;
+	int base64DataSize = 0;
 
 	//read file
 	if ((dataSize = Common::LoadFileIntoMemory(filepath, &data)) == -1) {
-		return S_FALSE;
+		return -1;
 	}
 
 	//convert file to base64 string
 	if ((base64DataSize = Common::Base64Encode(data, dataSize, &base64Data)) == -1) {
 		Common::hFree(data);
-		return S_FALSE;
+		return -1;
 	}
 
 	Common::hFree(data);
@@ -216,191 +206,237 @@ static HRESULT buildAttachmentData(const char *format, const char *filepath, cha
 
 	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
 		Common::hFree(base64Data);
-		return S_FALSE;
+		return -1;
 	}
 
 	if (Common::FormatString(*result, _size + 1, format, base64Data) == -1) {
 		Common::hFree(base64Data);
-		return S_FALSE;
+		return -1;
 	}
 
 	Common::hFree(base64Data);
 
-	return S_OK;
+	return _size;
 }
 
 //build string
-static HRESULT buildString(const char *format, const char *value, char **result)
+static int buildString(const char *format, const char *value, char **result)
 {
-	if (format == NULL || value == NULL)return S_FALSE;
+	if (format == NULL || value == NULL) return -1;
 
 	int _size = 0;
 
 	_size = strlen(format) + strlen(value);
 
 	if ((*result = (char*)Common::hAlloc((_size + 1) * sizeof(char))) == NULL) {
-		return S_FALSE;
+		return -1;
 	}
 
 	if (Common::FormatString(*result, _size + 1, format, value) == -1) {
-		return S_FALSE;
+		return -1;
 	}
 
-	return S_OK;
+	return _size;
 }
 
 //build email message
-static HRESULT buildMessage(char **_data, const char *to, const char *from, const char *fromName, const char *toName, const char *subject,
+static size_t buildMessage(char **data, int dataLines, const char *to, const char *from, const char *fromName, const char *toName, const char *subject,
 	const char *body, const char **emailHeader, int sendAttachment, const char *filepath, const char *filename)
 {
-	if (from == NULL || fromName == NULL || to == NULL || toName == NULL || subject == NULL || body == NULL || emailHeader == NULL) return S_FALSE;
+	if (from == NULL || fromName == NULL || to == NULL || toName == NULL || subject == NULL || body == NULL || emailHeader == NULL) return -1;
+
+	char **_data = 0;
+	size_t totalSize = 0;
+	size_t counter = 0;
+	int i = 0;
+
+	if ((_data = (char**)Common::hAlloc(dataLines * sizeof(char*))) == NULL) {
+		return -1;
+	}
 
 	//build DATE string
-	if ((buildDate(emailHeader[0], &_data[0])) == S_FALSE) {
-		return S_FALSE;
+	if ((counter = buildDate(emailHeader[0], &_data[0])) == -1) {
+		return -1;
 	}
+	totalSize += counter;
 
 	//build TO string
-	if ((buildToFrom(emailHeader[1], to, toName, &_data[1])) == S_FALSE) {
+	if ((counter = buildToFrom(emailHeader[1], to, toName, &_data[1])) == -1) {
 		Common::hFree(_data);
-		return S_FALSE;
+		return -1;
 	}
+	totalSize += counter;
 
 	//build FROM string
-	if ((buildToFrom(emailHeader[2], from, fromName, &_data[2])) == S_FALSE) {
+	if ((counter = buildToFrom(emailHeader[2], from, fromName, &_data[2])) == -1) {
 		Common::hFree(_data);
-		return S_FALSE;
+		return -1;
 	}
+	totalSize += counter;
 
 	//build messageid string
-	if ((buildMessageID(emailHeader[3], from, &_data[3])) == S_FALSE) {
+	if ((counter = buildMessageID(emailHeader[3], from, &_data[3])) == -1) {
 		Common::hFree(_data);
-		return S_FALSE;
+		return -1;
 	}
+	totalSize += counter;
 
 	//build subject string
-	if ((buildString(emailHeader[4], subject, &_data[4])) == S_FALSE) {
+	if ((counter = buildString(emailHeader[4], subject, &_data[4])) == -1) {
 		Common::hFree(_data);
-		return S_FALSE;
+		return -1;
 	}
+	totalSize += counter;
 
 	if (sendAttachment == FALSE) {
 
 		//add new line
-		if ((_data[5] = (char*)Common::hAlloc((strlen(emailHeader[5]) + 1) * sizeof(char))) == NULL) {
+		counter = strlen(emailHeader[5]);
+		if ((_data[5] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
 
-		if (Common::CopyString(_data[5], (strlen(emailHeader[5]) + 1), emailHeader[5]) != 0) {
+		if (Common::CopyString(_data[5], (counter + 1), emailHeader[5]) != 0) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		// append body
-		if ((buildString(emailHeader[6], body, &_data[6])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[6], body, &_data[6])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
-
+		totalSize += counter;
 	}
 	else {
 
 		//add mime type
-		if ((_data[5] = (char*)Common::hAlloc((strlen(emailHeader[5]) + 1) * sizeof(char))) == NULL) {
+		counter = strlen(emailHeader[5]);
+		if ((_data[5] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
 
-		if (Common::CopyString(_data[5], (strlen(emailHeader[5]) + 1), emailHeader[5]) != 0) {
+		if (Common::CopyString(_data[5], (counter + 1), emailHeader[5]) != 0) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		// append content-type mixed + define boundary
-		if ((buildString(emailHeader[6], BOUNDARY, &_data[6])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[6], BOUNDARY, &_data[6])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//add boundary
-		if ((buildString(emailHeader[7], BOUNDARY, &_data[7])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[7], BOUNDARY, &_data[7])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//add content-type for text
-		if ((_data[8] = (char*)Common::hAlloc((strlen(emailHeader[8]) + 1) * sizeof(char))) == NULL) {
+		counter = strlen(emailHeader[8]);
+		if ((_data[8] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
 
-		if (Common::CopyString(_data[8], (strlen(emailHeader[8]) + 1), emailHeader[8]) != 0) {
+		if (Common::CopyString(_data[8], (counter + 1), emailHeader[8]) != 0) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//append Content - Transfer - Encoding
+		counter = strlen(emailHeader[9]);
 		if ((_data[9] = (char*)Common::hAlloc((strlen(emailHeader[9]) + 1) * sizeof(char))) == NULL) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
 
 		if (Common::CopyString(_data[9], (strlen(emailHeader[9]) + 1), emailHeader[9]) != 0) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		// append body
-		if ((buildString(emailHeader[10], body, &_data[10])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[10], body, &_data[10])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//add boundary
-		if ((buildString(emailHeader[11], BOUNDARY, &_data[11])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[11], BOUNDARY, &_data[11])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//content type for attachment
-		if ((buildString(emailHeader[12], filename, &_data[12])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[12], filename, &_data[12])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//append Content - Transfer - Encoding
-		if ((_data[13] = (char*)Common::hAlloc((strlen(emailHeader[13]) + 1) * sizeof(char))) == NULL) {
+		counter = strlen(emailHeader[13]);
+		if ((_data[13] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
 
-		if (Common::CopyString(_data[13], (strlen(emailHeader[13]) + 1), emailHeader[13]) != 0) {
+		if (Common::CopyString(_data[13], (counter + 1), emailHeader[13]) != 0) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//Content-Disposition
-		if ((buildString(emailHeader[14], filename, &_data[14])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[14], filename, &_data[14])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//base64 data
-		if ((buildAttachmentData(emailHeader[15], filepath, &_data[15])) == S_FALSE) {
+		if ((counter = buildAttachmentData(emailHeader[15], filepath, &_data[15])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
+		totalSize += counter;
 
 		//add boundary - end
-		if ((buildString(emailHeader[16], BOUNDARY, &_data[16])) == S_FALSE) {
+		if ((counter = buildString(emailHeader[16], BOUNDARY, &_data[16])) == -1) {
 			Common::hFree(_data);
-			return S_FALSE;
+			return -1;
 		}
-
+		totalSize += counter;
 	}
 
-	return S_OK;
+	//concat all into one big string
+	if ((*data = (char*)Common::hAlloc((totalSize + 1) * sizeof(char)))) {
+		for (i = 0; i < dataLines; i++) {
+			if (Common::ConcatString(*data, totalSize + 1, _data[i]) == S_FALSE) {
+				Common::hFree(*data);
+				break;
+			}
+		}
+	}
+
+	for (i = 0; i < dataLines; i++) {
+		Common::hFree(_data[i]);
+	}
+	Common::hFree(_data);
+
+	return totalSize;
 }
 
 HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to, const char *toName, const char *subject,
@@ -412,27 +448,19 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 	CURLcode res = CURLE_OK;
 	struct curl_slist *recipients = NULL;
 	struct upload_status upload_ctx;
-	int dataSize = SimpleEmailHeaderSize;
 	int i = 0;
-
-	upload_ctx.lines_read = 0;
+	char *_emailData;
 
 	Common::init();
 
-	if (sendAttachment == TRUE) {
-		dataSize = AttachmentEmailHeaderSize;
-	}
-
-	if ((_emailHeader = (char**)Common::hAlloc(dataSize * sizeof(char*))) == NULL) {
-		return S_FALSE;
-	}
-
 	if (sendAttachment == FALSE) {
-		buildMessage(_emailHeader, to, from, fromName, toName, subject, body, simpleEmailHeader, FALSE, filepath, filename);
+		upload_ctx.dataLeft = buildMessage(&_emailData, SimpleEmailHeaderLines, to, from, fromName, toName, subject, body, simpleEmailHeader, FALSE, filepath, filename);
 	}
 	else {
-		buildMessage(_emailHeader, to, from, fromName, toName, subject, body, emailWithAttachmentHeader, TRUE, filepath, filename);
+		upload_ctx.dataLeft = buildMessage(&_emailData, AttachmentEmailHeaderLines, to, from, fromName, toName, subject, body, emailWithAttachmentHeader, TRUE, filepath, filename);
 	}
+
+	upload_ctx.data = _emailData;
 
 	curl = curl_easy_init();
 
@@ -446,7 +474,7 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 		recipients = curl_slist_append(recipients, to);
 		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
 		/*if (base64DataSize > CURLOPT_INFILESIZE_LARGE)
-			curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, base64DataSize * 2);*/
+			curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, base64DataSize);*/
 		curl_easy_setopt(curl, CURLOPT_READFUNCTION, _read_function_callback);
 		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
 		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
@@ -458,11 +486,7 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 		curl_easy_cleanup(curl);
 	}
 
-	for (i = 0; i < dataSize; i++) {
-		Common::hFree(_emailHeader[i]);
-	}
-
-	Common::hFree(_emailHeader);
+	Common::hFree(_emailData);
 	//Common::hZero((void*)password, strlen(password));
 
 	return (res == CURLE_OK ? S_OK : S_FALSE);

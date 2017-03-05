@@ -24,11 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#define TO "xxxxx@gmail.com"
-#define FROM "yyyyy@gmail.com"
+#define TO "xxxxxxxxx@gmail.com"
+#define FROM "yyyyyy@gmail.com"
 #define FromNAME "Tester1"
 #define ToNAME "Tester2"
-#define PASSWORD "xxxxxxxxxxxx"
+#define PASSWORD "xxxxxxxxxxxxxxxx"
 
 int main(void)
 {
@@ -36,7 +36,7 @@ int main(void)
 	char body[100] = "Test body\r\nnew line\r\ntest test\r\ntest";
 
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "");
-	LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\path\to\file\test.7z", "funny.7z");
+	LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\\path\\to\\filename.7z", "funny.7z");
 
 	return EXIT_SUCCESS;
 }
