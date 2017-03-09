@@ -296,7 +296,7 @@ static size_t buildMessage(char **data, int dataLines, const char *to, const cha
 	int i = 0;
 	int errorOccured = 0;
 
-	if ((_data = (char**)Common::hAlloc(dataLines * sizeof(char*))) != NULL) {
+	if ((_data = (char**)Common::hAlloc(dataLines * sizeof(char*))) == NULL) {
 		errorOccured = 1;
 	}
 
