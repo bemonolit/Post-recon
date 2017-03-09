@@ -53,7 +53,10 @@ namespace Common
 
 	//copies characters of one string to another
 	int CopyString(char *destination, size_t sizeInBytes, const char *source);
-	
+
+	//copies characters of one string to another
+	int CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max);
+
 	//concat strings
 	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source);
 
@@ -65,4 +68,7 @@ namespace Common
 
 	//convert byte array to base64 string
 	unsigned long Base64Encode(const unsigned char *data, unsigned long size, char **str);
+
+	//split string
+	char **SplitString(int *count, const char *str, SIZE_T size, const char *delim);
 }

@@ -68,6 +68,7 @@ char* Common::WcharToChar(const WCHAR *src, int slen)
 	if (src == NULL || slen <= 0)return NULL;
 
 	int len = 0;
+	char *dest = 0;
 
 	//Maps a UTF-16 (wide character) string to a new character string. 
 	//The new character string is not necessarily from a multibyte character set. 
@@ -76,10 +77,13 @@ char* Common::WcharToChar(const WCHAR *src, int slen)
 		return NULL;
 	}
 
-	char *dest = (char*)hAlloc((len + 1) * sizeof(char));
+	if ((dest = (char*)hAlloc((len + 1) * sizeof(char))) == NULL) {
+		return NULL;
+	}
 
 	//convert
 	if (WideCharToMultiByte(CP_ACP, 0, src, slen, dest, len, NULL, NULL) == 0) {
+		hFree(dest);
 		return NULL;
 	}
 
@@ -106,12 +110,11 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 	int messageIDSize = 0;
 
 	//copy sender email
-	senderCopy = (char*)hAlloc((senderLength + 1) * sizeof(char));
-	if (senderCopy == NULL) {
+	if ((senderCopy = (char*)hAlloc((senderLength + 1) * sizeof(char))) == NULL) {
 		return S_FALSE;
 	}
 
-	if (Common::CopyString(senderCopy, senderLength + 1, sender) != 0) {
+	if (CopyString(senderCopy, senderLength + 1, sender) != 0) {
 		hFree(senderCopy);
 		return S_FALSE;
 	}
@@ -128,7 +131,7 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 		return S_FALSE;
 	}
 
-	if (Common::CopyString(domain, domainSize, tmp) != 0) {
+	if (CopyString(domain, domainSize, tmp) != 0) {
 		hFree(senderCopy);
 		return S_FALSE;
 	}
@@ -168,19 +171,19 @@ HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char 
 	}
 
 	//copy trimmed guid to messageid e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	if (Common::FormatString(*messageID, messageIDSize, "%s", sTrimIdA) == -1) {
+	if (FormatString(*messageID, messageIDSize, "%s", sTrimIdA) == -1) {
 		hFree(sTrimIdA);
 		return S_FALSE;
 	}
 
 	//concat @ e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@
-	if (Common::FormatString(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") == -1) {
+	if (FormatString(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") == -1) {
 		hFree(sTrimIdA);
 		return S_FALSE;
 	}
 
 	//concat domain e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
-	if (Common::FormatString(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) == -1) {
+	if (FormatString(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) == -1) {
 		hFree(sTrimIdA);
 		return S_FALSE;
 	}
@@ -195,7 +198,7 @@ char* Common::GetTimezoneOffset(void)
 	struct tm lcl;
 	struct tm gmt;
 
-	char *dateTime = (char*)Common::hAlloc(50 * sizeof(char));
+	char *dateTime = (char*)hAlloc(50 * sizeof(char));
 	if (dateTime == NULL) {
 		return NULL;
 	}
@@ -230,6 +233,16 @@ int Common::CopyString(char *destination, size_t sizeInBytes, const char *source
 	return strncpy_s(destination, sizeInBytes, source, _TRUNCATE);
 }
 
+int Common::CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max)
+{
+	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return EINVAL;
+
+	if (max > sizeInBytes)
+		return strncpy_s(destination, sizeInBytes, source, _TRUNCATE);
+
+	return strncpy_s(destination, sizeInBytes, source, max);
+}
+
 //concat strings
 HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *source)
 {
@@ -253,6 +266,7 @@ int Common::FormatString(char *destination, const size_t sizeInBytes, char const
 	return result;
 }
 
+//load file into memory
 unsigned long Common::LoadFileIntoMemory(const char *filename, unsigned char **data)
 {
 	if (filename == NULL) return -1;
@@ -280,19 +294,19 @@ unsigned long Common::LoadFileIntoMemory(const char *filename, unsigned char **d
 
 	size = filesize.LowPart;
 
-	if ((*data = (unsigned char*)Common::hAlloc(size * sizeof(unsigned char))) == NULL) {
+	if ((*data = (unsigned char*)hAlloc(size * sizeof(unsigned char))) == NULL) {
 		CloseHandle(hFile);
 		return -1;
 	}
 
 	if (ReadFile(hFile, *data, size, &bytesRead, NULL) == 0) {
-		Common::hFree(*data);
+		hFree(*data);
 		CloseHandle(hFile);
 		return -1;
 	}
 
 	if (size != bytesRead) {
-		Common::hFree(*data);
+		hFree(*data);
 		CloseHandle(hFile);
 		return -1;
 	}
@@ -313,14 +327,85 @@ unsigned long Common::Base64Encode(const unsigned char *data, unsigned long size
 		return -1;
 	}
 
-	if ((*str = (char*)Common::hAlloc(bytesWritten * sizeof(char))) == NULL) {
+	if ((*str = (char*)hAlloc(bytesWritten * sizeof(char))) == NULL) {
 		return -1;
 	}
 
 	if (CryptBinaryToString(data, size, CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, *str, &bytesWritten) == 0) {
-		Common::hFree(*str);
+		hFree(*str);
 		return -1;
 	}
 
 	return bytesWritten;
+}
+
+char **Common::SplitString(int *count, const char *str, SIZE_T size, const char *delim)
+{
+	char **data = { 0 };
+	char *token = 0;
+	char *strCopy = 0;
+	char *next_token = 0;
+	int i = 0;
+
+	if ((strCopy = (char*)hAlloc((size + 1) * sizeof(char))) == NULL) {
+		return NULL;
+	}
+
+	if (CopyString(strCopy, size + 1, str) != 0) {
+		hFree(strCopy);
+		return NULL;
+	}
+
+	//count tokens
+	token = strtok_s(strCopy, delim, &next_token);
+	if (token == NULL) {
+		hFree(strCopy);
+		return NULL;
+	}
+
+	while (token != NULL) {
+		token = strtok_s(NULL, delim, &next_token);
+		(*count)++;
+	}
+
+	hFree(strCopy);
+
+	if ((strCopy = (char*)hAlloc((size + 1) * sizeof(char))) == NULL) {
+		return NULL;
+	}
+
+	if (CopyString(strCopy, size + 1, str) != 0) {
+		hFree(strCopy);
+		return NULL;
+	}
+
+	//get data
+	if ((data = (char**)hAlloc(*count * sizeof(char*))) == NULL) {
+		hFree(strCopy);
+		return NULL;
+	}
+
+	token = strtok_s(strCopy, delim, &next_token);
+	if (token == NULL) {
+		hFree(strCopy);
+		return NULL;
+	}
+
+	while (token != NULL) {
+		if ((data[i] = (char*)hAlloc((strlen(token) + 1) * sizeof(char))) == NULL) {
+			break;
+		}
+
+		if (CopyString(data[i], strlen(token) + 1, token) != 0) {
+			hFree(data[i]);
+			break;
+		}
+
+		i++;
+		token = strtok_s(NULL, delim, &next_token);
+	}
+
+	hFree(strCopy);
+
+	return data;
 }

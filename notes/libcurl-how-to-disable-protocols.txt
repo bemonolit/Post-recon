@@ -11,7 +11,7 @@
 #define CURL_DISABLE_FILE disables FILE
 #define CURL_DISABLE_TFTP disables TFTP
 #define CURL_DISABLE_HTTP disables HTTP
-#define CURL_DISABLE_IMAP disables IMAP
+//#define CURL_DISABLE_IMAP disables IMAP
 #define CURL_DISABLE_POP3 disables POP3
 //#define CURL_DISABLE_SMTP
 
