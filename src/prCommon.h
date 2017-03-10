@@ -36,6 +36,9 @@ namespace Common
 	//Allocates a block of memory from a heap.
 	void* hAlloc(SIZE_T size);
 
+	//Reallocates a block of memory from a heap.
+	void* hReAlloc(void *mem, SIZE_T size);
+
 	//free a memory block allocated from a heap by the hAlloc
 	void hFree(void *mem);
 
@@ -59,6 +62,9 @@ namespace Common
 
 	//concat strings
 	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source);
+
+	//concat strings
+	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source, size_t max);
 
 	//Writes formatted data to a string
 	int FormatString(char *buffer, const size_t sizeOfBuffer, char const* const format, ...);

@@ -43,6 +43,13 @@ void* Common::hAlloc(SIZE_T size)
 	return HeapAlloc(processHeap, HEAP_ZERO_MEMORY, size);
 }
 
+void* Common::hReAlloc(void *mem, SIZE_T size)
+{
+	if (processHeap == NULL || mem == NULL || size <= 0) return NULL;
+
+	return HeapReAlloc(processHeap, HEAP_ZERO_MEMORY, mem, size);
+}
+
 //free a memory block allocated from a heap by the HeapAlloc
 void Common::hFree(void *mem)
 {
@@ -251,6 +258,17 @@ HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *
 	return strncat_s(destination, sizeInBytes, source, _TRUNCATE) == 0 ? S_OK : S_FALSE;
 }
 
+//concat strings
+HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *source, size_t max)
+{
+	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return S_FALSE;
+
+	if (max > sizeInBytes)
+		return strncat_s(destination, sizeInBytes, source, _TRUNCATE) == 0 ? S_OK : S_FALSE;
+
+	return strncat_s(destination, sizeInBytes, source, max) == 0 ? S_OK : S_FALSE;
+}
+
 //format string
 int Common::FormatString(char *destination, const size_t sizeInBytes, char const* const format, ...)
 {
@@ -339,6 +357,7 @@ unsigned long Common::Base64Encode(const unsigned char *data, unsigned long size
 	return bytesWritten;
 }
 
+//split a string
 char **Common::SplitString(int *count, const char *str, SIZE_T size, const char *delim)
 {
 	char **data = { 0 };

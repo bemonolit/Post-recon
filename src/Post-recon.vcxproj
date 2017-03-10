@@ -161,10 +161,12 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="prCommon.cpp" />
     <ClCompile Include="prLibCurl.cpp" />
+    <ClCompile Include="prMime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="prCommon.h" />
     <ClInclude Include="prLibCurl.h" />
+    <ClInclude Include="prMime.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

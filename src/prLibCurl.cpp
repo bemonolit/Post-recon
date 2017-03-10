@@ -25,6 +25,7 @@ For more see the file 'LICENSE' for copying permission.
 
 #include <curl/curl.h>
 #include "prCommon.h"
+#include "prMime.h"
 #include <Strsafe.h>
 #include <string.h>
 
@@ -45,7 +46,7 @@ struct data_size {
 
 // simple email
 #define SimpleEmailHeaderLines	7
-static const char *simpleEmailHeader[] = {
+static const char *_simpleEmailHeader[] = {
 	"Date: %s\r\n",						//e.g. Mon, 29 Nov 2010 21:54:29 +1100
 	"To: %s (%s)\r\n",					//e.g. admin@example.org
 	"From: %s (%s)\r\n",				//e.g. support@example.gr(Joe Doe)
@@ -57,7 +58,7 @@ static const char *simpleEmailHeader[] = {
 
 // email with attachment
 #define AttachmentEmailHeaderLines	17
-static const char *emailWithAttachmentHeader[] = {
+static const char *_emailWithAttachmentHeader[] = {
 	"Date: %s\r\n",
 	"To: %s (%s)\r\n",
 	"From: %s (%s)\r\n",
@@ -88,7 +89,7 @@ static size_t _write_function_callback(void *contents, size_t size, size_t nmemb
 	size_t realsize = size * nmemb;
 	struct data_size *mem = (struct data_size *)userp;
 
-	mem->data = (char*)realloc(mem->data, mem->size + realsize + 1);
+	mem->data = (char*)Common::hReAlloc(mem->data, mem->size + realsize + 1);
 	if (mem->data == NULL) {
 		return 0;
 	}
@@ -129,7 +130,7 @@ static size_t _read_function_callback(void *ptr, size_t size, size_t nmemb, void
 }
 
 //build DATE string
-static int buildDate(const char *format, char **result)
+static int _buildDate(const char *format, char **result)
 {
 	if (format == NULL) return -1;
 
@@ -157,7 +158,7 @@ static int buildDate(const char *format, char **result)
 }
 
 //build to and from strings
-static int buildToFrom(const char *format, const char *tofrom, const char *name, char **result)
+static int _buildToFrom(const char *format, const char *tofrom, const char *name, char **result)
 {
 	if (format == NULL || tofrom == NULL || name == NULL) return -1;
 
@@ -177,7 +178,7 @@ static int buildToFrom(const char *format, const char *tofrom, const char *name,
 }
 
 //build MessageID string
-static int buildMessageID(const char *format, const char *from, char **result)
+static int _buildMessageID(const char *format, const char *from, char **result)
 {
 	if (format == NULL || from == NULL) return -1;
 
@@ -205,7 +206,7 @@ static int buildMessageID(const char *format, const char *from, char **result)
 }
 
 //build attachment data
-static int buildAttachmentData(const char *format, const char *filepath, char **result)
+static int _buildAttachmentData(const char *format, const char *filepath, char **result)
 {
 	if (format == NULL || filepath == NULL) return -1;
 
@@ -245,7 +246,7 @@ static int buildAttachmentData(const char *format, const char *filepath, char **
 }
 
 //build string
-static int buildString(const char *format, const char *value, char **result)
+static int _buildString(const char *format, const char *value, char **result)
 {
 	if (format == NULL || value == NULL) return -1;
 
@@ -265,7 +266,7 @@ static int buildString(const char *format, const char *value, char **result)
 }
 
 //build imap inbox email url
-static int buildString(const char *format, int value, char **result)
+static int _buildString(const char *format, int value, char **result)
 {
 	if (format == NULL || value == NULL) return -1;
 
@@ -285,7 +286,7 @@ static int buildString(const char *format, int value, char **result)
 }
 
 //build email message
-static size_t buildMessage(char **data, int dataLines, const char *to, const char *from, const char *fromName, const char *toName, const char *subject,
+static size_t _buildMessage(char **data, int dataLines, const char *to, const char *from, const char *fromName, const char *toName, const char *subject,
 	const char *body, const char **emailHeader, int sendAttachment, const char *filepath, const char *filename)
 {
 	if (from == NULL || fromName == NULL || to == NULL || toName == NULL || subject == NULL || body == NULL || emailHeader == NULL) return -1;
@@ -301,31 +302,31 @@ static size_t buildMessage(char **data, int dataLines, const char *to, const cha
 	}
 
 	//build DATE string
-	if (errorOccured || (counter = buildDate(emailHeader[0], &_data[0])) == -1) {
+	if (errorOccured || (counter = _buildDate(emailHeader[0], &_data[0])) == -1) {
 		errorOccured = 2;
 	}
 	if (!errorOccured) totalSize += counter;
 
 	//build TO string
-	if (errorOccured || (counter = buildToFrom(emailHeader[1], to, toName, &_data[1])) == -1) {
+	if (errorOccured || (counter = _buildToFrom(emailHeader[1], to, toName, &_data[1])) == -1) {
 		errorOccured = 3;
 	}
 	if (!errorOccured) totalSize += counter;
 
 	//build FROM string
-	if (errorOccured || (counter = buildToFrom(emailHeader[2], from, fromName, &_data[2])) == -1) {
+	if (errorOccured || (counter = _buildToFrom(emailHeader[2], from, fromName, &_data[2])) == -1) {
 		errorOccured = 4;
 	}
 	if (!errorOccured) totalSize += counter;
 
 	//build messageid string
-	if (errorOccured || (counter = buildMessageID(emailHeader[3], from, &_data[3])) == -1) {
+	if (errorOccured || (counter = _buildMessageID(emailHeader[3], from, &_data[3])) == -1) {
 		errorOccured = 5;
 	}
 	if (!errorOccured) totalSize += counter;
 
 	//build subject string
-	if (errorOccured || (counter = buildString(emailHeader[4], subject, &_data[4])) == -1) {
+	if (errorOccured || (counter = _buildString(emailHeader[4], subject, &_data[4])) == -1) {
 		errorOccured = 6;
 	}
 	if (!errorOccured) totalSize += counter;
@@ -344,7 +345,7 @@ static size_t buildMessage(char **data, int dataLines, const char *to, const cha
 		if (!errorOccured) totalSize += counter;
 
 		// append body
-		if (errorOccured || (counter = buildString(emailHeader[6], body, &_data[6])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[6], body, &_data[6])) == -1) {
 			errorOccured = 9;
 		}
 		if (!errorOccured) totalSize += counter;
@@ -363,13 +364,13 @@ static size_t buildMessage(char **data, int dataLines, const char *to, const cha
 		if (!errorOccured) totalSize += counter;
 
 		// append content-type mixed + define boundary
-		if (errorOccured || (counter = buildString(emailHeader[6], BOUNDARY, &_data[6])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[6], BOUNDARY, &_data[6])) == -1) {
 			errorOccured = 9;
 		}
 		if (!errorOccured) totalSize += counter;
 
 		//add boundary
-		if (errorOccured || (counter = buildString(emailHeader[7], BOUNDARY, &_data[7])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[7], BOUNDARY, &_data[7])) == -1) {
 			errorOccured = 10;
 		}
 		if (!errorOccured) totalSize += counter;
@@ -397,19 +398,19 @@ static size_t buildMessage(char **data, int dataLines, const char *to, const cha
 		if (!errorOccured) totalSize += counter;
 
 		// append body
-		if (errorOccured || (counter = buildString(emailHeader[10], body, &_data[10])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[10], body, &_data[10])) == -1) {
 			errorOccured = 15;
 		}
 		if (!errorOccured) totalSize += counter;
 
 		//add boundary
-		if (errorOccured || (counter = buildString(emailHeader[11], BOUNDARY, &_data[11])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[11], BOUNDARY, &_data[11])) == -1) {
 			errorOccured = 16;
 		}
 		if (!errorOccured) totalSize += counter;
 
 		//content type for attachment
-		if (errorOccured || (counter = buildString(emailHeader[12], filename, &_data[12])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[12], filename, &_data[12])) == -1) {
 			errorOccured = 17;
 		}
 		if (!errorOccured) totalSize += counter;
@@ -426,19 +427,19 @@ static size_t buildMessage(char **data, int dataLines, const char *to, const cha
 		if (!errorOccured) totalSize += counter;
 
 		//Content-Disposition
-		if (errorOccured || (counter = buildString(emailHeader[14], filename, &_data[14])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[14], filename, &_data[14])) == -1) {
 			errorOccured = 20;
 		}
 		if (!errorOccured) totalSize += counter;
 
 		//base64 data
-		if (errorOccured || (counter = buildAttachmentData(emailHeader[15], filepath, &_data[15])) == -1) {
+		if (errorOccured || (counter = _buildAttachmentData(emailHeader[15], filepath, &_data[15])) == -1) {
 			errorOccured = 21;
 		}
 		if (!errorOccured) totalSize += counter;
 
 		//add boundary - end
-		if (errorOccured || (counter = buildString(emailHeader[16], BOUNDARY, &_data[16])) == -1) {
+		if (errorOccured || (counter = _buildString(emailHeader[16], BOUNDARY, &_data[16])) == -1) {
 			errorOccured = 22;
 		}
 		if (!errorOccured) totalSize += counter;
@@ -479,14 +480,14 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 	char *_emailData;
 
 	if (sendAttachment == FALSE) {
-		if ((upload_ctx.size = buildMessage(&_emailData, SimpleEmailHeaderLines,
-			to, from, fromName, toName, subject, body, simpleEmailHeader, FALSE, filepath, filename)) == 0) {
+		if ((upload_ctx.size = _buildMessage(&_emailData, SimpleEmailHeaderLines,
+			to, from, fromName, toName, subject, body, _simpleEmailHeader, FALSE, filepath, filename)) == 0) {
 			return S_FALSE;
 		}
 	}
 	else {
-		if ((upload_ctx.size = buildMessage(&_emailData, AttachmentEmailHeaderLines,
-			to, from, fromName, toName, subject, body, emailWithAttachmentHeader, TRUE, filepath, filename)) == 0) {
+		if ((upload_ctx.size = _buildMessage(&_emailData, AttachmentEmailHeaderLines,
+			to, from, fromName, toName, subject, body, _emailWithAttachmentHeader, TRUE, filepath, filename)) == 0) {
 			return S_FALSE;
 		}
 	}
@@ -521,6 +522,44 @@ HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *t
 	return (res == CURLE_OK ? S_OK : S_FALSE);
 }
 
+static int _getNewEmailsIds(int **ids, const char *downloadData)
+{
+	char **splittedString = 0;
+	int carriageReturnIndex = 0;
+	char *data = 0;
+	int total = -1;
+	int i = 0;
+	int splitted = 0;
+	int j = 0;
+
+	//remove carriage return
+	carriageReturnIndex = strcspn(downloadData, "\r\n");
+	if (carriageReturnIndex > 0 && (data = (char*)Common::hAlloc((carriageReturnIndex + 1) * sizeof(char))) != NULL) {
+		if (Common::CopyString(data, carriageReturnIndex + 1, downloadData, carriageReturnIndex) == 0) {
+			//split string to get email ids
+			if ((splittedString = Common::SplitString(&splitted, data, carriageReturnIndex, " ")) != NULL) {
+				if (splitted > 2) {
+					total = splitted - 2;
+					//get ids
+					if ((*ids = (int*)Common::hAlloc(total * sizeof(int))) != NULL) {
+						//ignore "* SEARCH"
+						for (i = 2; i < splitted; i++) {
+							*(*ids + j++) = atoi(splittedString[i]);
+						}
+					}
+				}
+				for (i = 0; i < splitted; i++) {
+					Common::hFree(splittedString[i]);
+				}
+				Common::hFree(splittedString);
+			}
+		}
+		Common::hFree(data);
+	}
+
+	return total;
+}
+
 //collect new unseen emails ids
 int LibCurl::GetNewEmailsIDs(int **ids, const char *username, const char *password, const char *userAgent, long verbose)
 {
@@ -529,13 +568,6 @@ int LibCurl::GetNewEmailsIDs(int **ids, const char *username, const char *passwo
 	CURL *curl;
 	CURLcode res = CURLE_OK;
 	struct data_size download_ctx;
-
-	char **splittedString = 0;
-	int splitted = 0;
-	int i = 0;
-	int j = 0;
-	int carriageReturnIndex = 0;
-	char *data;
 	int total = -1;
 
 	download_ctx.data = (char*)malloc(1);
@@ -556,30 +588,7 @@ int LibCurl::GetNewEmailsIDs(int **ids, const char *username, const char *passwo
 		res = curl_easy_perform(curl);
 
 		if (res == CURLE_OK) {
-			//remove carriage return
-			carriageReturnIndex = strcspn(download_ctx.data, "\r\n");
-			if (carriageReturnIndex > 0 && (data = (char*)Common::hAlloc((carriageReturnIndex + 1) * sizeof(char))) != NULL) {
-				if (Common::CopyString(data, carriageReturnIndex + 1, download_ctx.data, carriageReturnIndex) == 0) {
-					//split string to get email ids
-					if ((splittedString = Common::SplitString(&splitted, data, carriageReturnIndex, " ")) != NULL) {
-						if (splitted > 2) {
-							total = splitted - 2;
-							//get ids
-							if ((*ids = (int*)Common::hAlloc(total * sizeof(int))) != NULL) {
-								//ignore "* SEARCH"
-								for (i = 2; i < splitted; i++) {
-									*(*ids + j++) = atoi(splittedString[i]);
-								}
-							}
-						}
-						for (i = 0; i < splitted; i++) {
-							Common::hFree(splittedString[i]);
-						}
-						Common::hFree(splittedString);
-					}
-				}
-				Common::hFree(data);
-			}
+			total = _getNewEmailsIds(ids, download_ctx.data);
 		}
 
 		curl_easy_cleanup(curl);
@@ -598,13 +607,13 @@ HRESULT LibCurl::ReceiveEmail(int uid, const char *username, const char *passwor
 	CURL *curl;
 	CURLcode res = CURLE_OK;
 	struct data_size download_ctx;
-	int counter = 0;
 	char *url = 0;
+	MimeMessage *mm;
 
 	download_ctx.data = (char*)malloc(1);
 	download_ctx.size = 0;
 
-	if ((counter = buildString("imaps://imap.gmail.com:993/INBOX/;UID=%d", uid, &url)) != -1) {
+	if (_buildString("imaps://imap.gmail.com:993/INBOX/;UID=%d", uid, &url) != -1) {
 		curl = curl_easy_init();
 		if (curl) {
 
@@ -617,11 +626,16 @@ HRESULT LibCurl::ReceiveEmail(int uid, const char *username, const char *passwor
 			curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent);
 
 			res = curl_easy_perform(curl);
+
 			if (res == CURLE_OK) {
-				//printf("%lu bytes retrieved\n", (long)download_ctx.size);
-				//printf("data retrieved: %s\n", download_ctx.data);
-				//parse message
-				//.......
+
+				if ((mm = (MimeMessage*)Common::hAlloc(sizeof(MimeMessage))) != NULL) {
+					if (Mime::ParseMime(mm, download_ctx.data, download_ctx.size) == S_OK) {
+
+					}
+					Common::hFree(mm->body);
+					Common::hFree(mm);
+				}
 			}
 
 			curl_easy_cleanup(curl);
