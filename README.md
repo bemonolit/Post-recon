@@ -1,5 +1,5 @@
 ### Post-recon
-Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering further info about target network and uses Gmail as a C&C server.
+Post-recon is a post-exploitation reconnaissance toolkit. Uses Gmail as a C&C server.
 
 
 
@@ -9,7 +9,8 @@ Post-recon is a post-exploitation reconnaissance toolkit that helps in gathering
 * Turn on "Access for less secure apps" under the security settings of the account. [less secure apps](https://www.google.com/settings/security/lesssecureapps)
 * You may also have to enable IMAP in the account settings.
 * Visual C++ toolset v140 (VS 2015).
-* libcurl 7.xx.x
+* libcurl 7.xx.x (https://curl.haxx.se/download.html).
+* Jsmn JSON parser (https://github.com/zserge/jsmn).
 
 
 

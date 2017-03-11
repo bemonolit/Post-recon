@@ -25,13 +25,13 @@ For more see the file 'LICENSE' for copying permission.
 #include "prCommon.h"
 #include "prLibCurl.h"
 
-#define TO "xxxx@gmail.com"
-#define PASSWORD2 "xxxx"
-#define ToNAME "xxxx"
+#define TO "xxxxxx@gmail.com"
+#define PASSWORD2 "xxxxxxx"
+#define ToNAME "xxxxxx"
 
 #define FROM "yyyyy@gmail.com"
 #define PASSWORD "yyyyy"
-#define FromNAME "yyyyy"
+#define FromNAME "yyyyyyy"
 
 
 int main(void)

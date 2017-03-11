@@ -158,12 +158,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="jsmn.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="prCommon.cpp" />
     <ClCompile Include="prLibCurl.cpp" />
     <ClCompile Include="prMime.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="jsmn.h" />
     <ClInclude Include="prCommon.h" />
     <ClInclude Include="prLibCurl.h" />
     <ClInclude Include="prMime.h" />

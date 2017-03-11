@@ -25,6 +25,7 @@ For more see the file 'LICENSE' for copying permission.
 #include "prCommon.h"
 #include <stdio.h>
 
+//works only for reading new/unseen emails(not forwarded or replied) from gmail. (utf8)
 HRESULT Mime::ParseMime(MimeMessage *msg, const char *raw_data, int rawDataSize)
 {
 	char **splittedString = 0;
@@ -33,9 +34,12 @@ HRESULT Mime::ParseMime(MimeMessage *msg, const char *raw_data, int rawDataSize)
 	int equalIndex = 0;
 	int carriageIndex = 0;
 	char boundary[256] = "--";
+	char *tmp = 0;
 
 	if ((splittedString = Common::SplitString(&splitted, raw_data, rawDataSize, "\n")) != NULL) {
 		for (i = 0; i < splitted; i++) {
+
+			//extract boundary value
 			if (strstr(splittedString[i], "boundary") != NULL) {
 				equalIndex = strcspn(splittedString[i], "=");
 				carriageIndex = strcspn(splittedString[i], "\r");
@@ -43,10 +47,39 @@ HRESULT Mime::ParseMime(MimeMessage *msg, const char *raw_data, int rawDataSize)
 					break;
 				}
 			}
+
+			//body message begins
 			if (strstr(splittedString[i], "Content-Type: text/plain; charset=UTF-8") != NULL) {
+				//ignore next empty line
 				i += 2;
-				//read body
-				//.....
+				//read till boundary
+				while (strstr(splittedString[i], boundary) == NULL && i < splitted) {
+					//ignore empty lines
+					if (_stricmp(splittedString[i], "\r") != 0) {
+						if (msg->body == NULL) {
+							if ((msg->body = (char*)Common::hAlloc(strlen(splittedString[i]) * sizeof(char))) == NULL) {
+								break;
+							}
+							carriageIndex = strcspn(splittedString[i], "\r");
+							if (Common::CopyString(msg->body, strlen(splittedString[i]), splittedString[i], carriageIndex) == S_FALSE) {
+								break;
+							}
+						}
+						else {
+							if ((tmp = (char*)Common::hReAlloc(msg->body, strlen(msg->body) + strlen(splittedString[i]) * sizeof(char))) == NULL) {
+								break;
+							}
+							msg->body = tmp;
+							carriageIndex = strcspn(splittedString[i], "\r");
+							if (Common::ConcatString(msg->body, strlen(msg->body) + strlen(splittedString[i]), splittedString[i], carriageIndex) == S_FALSE) {
+								break;
+							}
+						}
+					}
+					i++;
+				}
+				//stop reading
+				break;
 			}
 		}
 

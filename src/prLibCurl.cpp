@@ -28,6 +28,7 @@ For more see the file 'LICENSE' for copying permission.
 #include "prMime.h"
 #include <Strsafe.h>
 #include <string.h>
+#include "jsmn.h"
 
 #define BOUNDARY	"EEmmaaiill__BBoouunnddaarryy"
 #define SIZE 4096
@@ -570,7 +571,7 @@ int LibCurl::GetNewEmailsIDs(int **ids, const char *username, const char *passwo
 	struct data_size download_ctx;
 	int total = -1;
 
-	download_ctx.data = (char*)malloc(1);
+	download_ctx.data = (char*)Common::hAlloc(1);
 	download_ctx.size = 0;
 
 	curl = curl_easy_init();
@@ -610,7 +611,7 @@ HRESULT LibCurl::ReceiveEmail(int uid, const char *username, const char *passwor
 	char *url = 0;
 	MimeMessage *mm;
 
-	download_ctx.data = (char*)malloc(1);
+	download_ctx.data = (char*)Common::hAlloc(1);
 	download_ctx.size = 0;
 
 	if (_buildString("imaps://imap.gmail.com:993/INBOX/;UID=%d", uid, &url) != -1) {
@@ -631,7 +632,8 @@ HRESULT LibCurl::ReceiveEmail(int uid, const char *username, const char *passwor
 
 				if ((mm = (MimeMessage*)Common::hAlloc(sizeof(MimeMessage))) != NULL) {
 					if (Mime::ParseMime(mm, download_ctx.data, download_ctx.size) == S_OK) {
-
+						//parse json..
+						//parse command..
 					}
 					Common::hFree(mm->body);
 					Common::hFree(mm);

@@ -57,11 +57,11 @@ namespace Common
 	//copies characters of one string to another
 	int CopyString(char *destination, size_t sizeInBytes, const char *source);
 
-	//copies characters of one string to another
-	int CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max);
-
 	//concat strings
 	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source);
+
+	//copies characters of one string to another
+	int CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max);
 
 	//concat strings
 	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source, size_t max);
