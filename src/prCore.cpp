@@ -124,6 +124,7 @@ static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, cons
 
 		size = wcslen(v.bstrVal);
 
+		//testing.. 
 		//xwconcat(buf, buflen, vtProp.bstrVal);
 		//xwconcat(buf, buflen, L",");
 
