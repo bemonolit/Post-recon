@@ -33,6 +33,9 @@
     <ClCompile Include="prCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="prSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="prLibCurl.h">
@@ -48,6 +51,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="prCore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="prSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
