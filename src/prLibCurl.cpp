@@ -29,6 +29,7 @@ For more see the file 'LICENSE' for copying permission.
 #include <Strsafe.h>
 #include <string.h>
 #include "jsmn.h"
+#include "prSystem.h"
 
 #define BOUNDARY	"EEmmaaiill__BBoouunnddaarryy"
 #define SIZE 4096
@@ -46,15 +47,20 @@ struct data_size {
 // .:: email headers ::.
 
 // simple email
-#define SimpleEmailHeaderLines	7
+#define SimpleEmailHeaderLines	12
 static const char *_simpleEmailHeader[] = {
-	"Date: %s\r\n",						//e.g. Mon, 29 Nov 2010 21:54:29 +1100
-	"To: %s (%s)\r\n",					//e.g. admin@example.org
-	"From: %s (%s)\r\n",				//e.g. support@example.gr(Joe Doe)
-	"Message-ID: <%s>\r\n",				//e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
-	"Subject: %s\r\n",					//subject
-	"\r\n",								//do not remove
-	"%s\r\n"							//body
+	"Date: %s\r\n",
+	"To: %s (%s)\r\n",
+	"From: %s (%s)\r\n",
+	"Message-ID: <%s>\r\n",
+	"Subject: %s\r\n",
+	"MIME-Version: 1.0\r\n",
+	"Content-Type: multipart/mixed; boundary=%s\r\n\r\n",
+	"--%s\r\n",
+	"Content-type: text/plain; charset=UTF-8\r\n",
+	"Content-Transfer-Encoding: 7bit\r\n\r\n",
+	"%s",
+	"\r\n--%s--\r\n"
 };
 
 // email with attachment
@@ -79,6 +85,7 @@ static const char *_emailWithAttachmentHeader[] = {
 	"\r\n--%s--\r\n",											//"\r\n--%s--" boundary for multiple files
 	//"\r\n.\r\n"
 };
+
 
 // :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -389,8 +396,12 @@ static int _buildString(const char *format, int value, char **result)
 }
 
 //build email message
-static size_t _buildMessage(char **data, int dataLines, const char *to, const char *from, const char *fromName, const char *toName, const char *subject,
-	const char *body, const char **emailHeader, int sendAttachment, const char *filepath, const char *filename)
+static size_t _buildMessage(char **data, int dataLines, const char *to,
+	const char *from, const char *fromName,
+	const char *toName, const char *subject,
+	const char *body, const char **emailHeader,
+	int sendAttachment, const char *filepath,
+	const char *filename)
 {
 	if (from == NULL || fromName == NULL || to == NULL || toName == NULL || subject == NULL || body == NULL || emailHeader == NULL) return -1;
 
@@ -399,6 +410,10 @@ static size_t _buildMessage(char **data, int dataLines, const char *to, const ch
 	size_t counter = 0;
 	int i = 0;
 	int errorOccured = 0;
+
+	if (sendAttachment == TRUE && System::FileExists(filepath) == FALSE) {
+		return -1;
+	}
 
 	if ((_data = (char**)Common::hAlloc(dataLines * sizeof(char*))) == NULL) {
 		errorOccured = 1;
@@ -434,78 +449,67 @@ static size_t _buildMessage(char **data, int dataLines, const char *to, const ch
 	}
 	if (!errorOccured) totalSize += counter;
 
-	if (sendAttachment == FALSE) {
+	//add mime type
+	counter = strlen(emailHeader[5]);
+	if (errorOccured || (_data[5] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
+		errorOccured = 7;
+	}
 
-		//add new line
-		counter = strlen(emailHeader[5]);
-		if (errorOccured || (_data[5] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
-			errorOccured = 7;
-		}
+	if (errorOccured || Common::CopyString(_data[5], (counter + 1), emailHeader[5]) != 0) {
+		errorOccured = 8;
+	}
+	if (!errorOccured) totalSize += counter;
 
-		if (errorOccured || Common::CopyString(_data[5], (counter + 1), emailHeader[5]) != 0) {
-			errorOccured = 8;
-		}
-		if (!errorOccured) totalSize += counter;
+	// append content-type mixed + define boundary
+	if (errorOccured || (counter = _buildString(emailHeader[6], BOUNDARY, &_data[6])) == -1) {
+		errorOccured = 9;
+	}
+	if (!errorOccured) totalSize += counter;
 
-		// append body
-		if (errorOccured || (counter = _buildString(emailHeader[6], body, &_data[6])) == -1) {
-			errorOccured = 9;
+	//add boundary
+	if (errorOccured || (counter = _buildString(emailHeader[7], BOUNDARY, &_data[7])) == -1) {
+		errorOccured = 10;
+	}
+	if (!errorOccured) totalSize += counter;
+
+	//add content-type for text
+	counter = strlen(emailHeader[8]);
+	if (errorOccured || (_data[8] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
+		errorOccured = 11;
+	}
+
+	if (errorOccured || Common::CopyString(_data[8], (counter + 1), emailHeader[8]) != 0) {
+		errorOccured = 12;
+	}
+	if (!errorOccured) totalSize += counter;
+
+	//append Content - Transfer - Encoding
+	counter = strlen(emailHeader[9]);
+	if (errorOccured || (_data[9] = (char*)Common::hAlloc((strlen(emailHeader[9]) + 1) * sizeof(char))) == NULL) {
+		errorOccured = 13;
+	}
+
+	if (errorOccured || Common::CopyString(_data[9], (strlen(emailHeader[9]) + 1), emailHeader[9]) != 0) {
+		errorOccured = 14;
+	}
+	if (!errorOccured) totalSize += counter;
+
+	// append body
+	if (errorOccured || (counter = _buildString(emailHeader[10], body, &_data[10])) == -1) {
+		errorOccured = 15;
+	}
+	if (!errorOccured) totalSize += counter;
+
+	if (sendAttachment == FALSE)
+	{
+		//add boundary - end
+		if (errorOccured || (counter = _buildString(emailHeader[11], BOUNDARY, &_data[11])) == -1) {
+			errorOccured = 16;
 		}
 		if (!errorOccured) totalSize += counter;
 	}
-	else {
-
-		//add mime type
-		counter = strlen(emailHeader[5]);
-		if (errorOccured || (_data[5] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
-			errorOccured = 7;
-		}
-
-		if (errorOccured || Common::CopyString(_data[5], (counter + 1), emailHeader[5]) != 0) {
-			errorOccured = 8;
-		}
-		if (!errorOccured) totalSize += counter;
-
-		// append content-type mixed + define boundary
-		if (errorOccured || (counter = _buildString(emailHeader[6], BOUNDARY, &_data[6])) == -1) {
-			errorOccured = 9;
-		}
-		if (!errorOccured) totalSize += counter;
-
-		//add boundary
-		if (errorOccured || (counter = _buildString(emailHeader[7], BOUNDARY, &_data[7])) == -1) {
-			errorOccured = 10;
-		}
-		if (!errorOccured) totalSize += counter;
-
-		//add content-type for text
-		counter = strlen(emailHeader[8]);
-		if (errorOccured || (_data[8] = (char*)Common::hAlloc((counter + 1) * sizeof(char))) == NULL) {
-			errorOccured = 11;
-		}
-
-		if (errorOccured || Common::CopyString(_data[8], (counter + 1), emailHeader[8]) != 0) {
-			errorOccured = 12;
-		}
-		if (!errorOccured) totalSize += counter;
-
-		//append Content - Transfer - Encoding
-		counter = strlen(emailHeader[9]);
-		if (errorOccured || (_data[9] = (char*)Common::hAlloc((strlen(emailHeader[9]) + 1) * sizeof(char))) == NULL) {
-			errorOccured = 13;
-		}
-
-		if (errorOccured || Common::CopyString(_data[9], (strlen(emailHeader[9]) + 1), emailHeader[9]) != 0) {
-			errorOccured = 14;
-		}
-		if (!errorOccured) totalSize += counter;
-
-		// append body
-		if (errorOccured || (counter = _buildString(emailHeader[10], body, &_data[10])) == -1) {
-			errorOccured = 15;
-		}
-		if (!errorOccured) totalSize += counter;
-
+	else
+	{
 		//add boundary
 		if (errorOccured || (counter = _buildString(emailHeader[11], BOUNDARY, &_data[11])) == -1) {
 			errorOccured = 16;
@@ -568,63 +572,6 @@ static size_t _buildMessage(char **data, int dataLines, const char *to, const ch
 	return totalSize;
 }
 
-//send email (STMP)
-HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to, const char *toName, const char *subject,
-	const char *body, const char *password, int sendAttachment, const char *filepath, const char *filename, const char *userAgent, long verbose)
-{
-	if (from == NULL || fromName == NULL || to == NULL || toName == NULL ||
-		subject == NULL || body == NULL || password == NULL || userAgent == NULL) return S_FALSE;
-
-	CURL *curl;
-	CURLcode res = CURLE_OK;
-	struct curl_slist *recipients = NULL;
-	struct data_size upload_ctx;
-	int i = 0;
-	char *_emailData;
-
-	if (sendAttachment == FALSE) {
-		if ((upload_ctx.size = _buildMessage(&_emailData, SimpleEmailHeaderLines,
-			to, from, fromName, toName, subject, body, _simpleEmailHeader, FALSE, filepath, filename)) == 0) {
-			return S_FALSE;
-		}
-	}
-	else {
-		if ((upload_ctx.size = _buildMessage(&_emailData, AttachmentEmailHeaderLines,
-			to, from, fromName, toName, subject, body, _emailWithAttachmentHeader, TRUE, filepath, filename)) == 0) {
-			return S_FALSE;
-		}
-	}
-
-	upload_ctx.data = _emailData;
-	curl = curl_easy_init();
-	if (curl) {
-
-		curl_easy_setopt(curl, CURLOPT_USERNAME, from);
-		curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
-		curl_easy_setopt(curl, CURLOPT_URL, "smtp://smtp.gmail.com:587");
-		curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
-		curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
-		recipients = curl_slist_append(recipients, to);
-		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
-		curl_easy_setopt(curl, CURLOPT_READFUNCTION, _read_function_callback);
-		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
-		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); //debug, turn it off on production
-		//curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent);
-
-		res = curl_easy_perform(curl);
-		curl_slist_free_all(recipients);
-		curl_easy_cleanup(curl);
-	}
-	else {
-		res = CURLE_FAILED_INIT;
-	}
-
-	Common::hFree(_emailData);
-
-	return (res == CURLE_OK ? S_OK : S_FALSE);
-}
-
 static int _getNewEmailsIds(int **ids, const char *downloadData)
 {
 	char **splittedString = 0;
@@ -661,6 +608,71 @@ static int _getNewEmailsIds(int **ids, const char *downloadData)
 	}
 
 	return total;
+}
+
+//send email (STMP)
+HRESULT LibCurl::SendEmail(const char *from, const char *fromName, const char *to,
+	const char *toName, const char *subject,
+	const char *body, const char *password,
+	int sendAttachment, const char *filepath,
+	const char *filename, const char *userAgent,
+	long verbose)
+{
+	if (from == NULL || fromName == NULL || to == NULL || toName == NULL ||
+		subject == NULL || body == NULL || password == NULL || userAgent == NULL) return S_FALSE;
+
+	CURL *curl;
+	CURLcode res = CURLE_OK;
+	struct curl_slist *recipients = NULL;
+	struct data_size upload_ctx;
+	int i = 0;
+	char *_emailData;
+
+	//upload_ctx.data = (char*)Common::hAlloc(1);
+	upload_ctx.size = 0;
+
+	if (sendAttachment == FALSE) {
+		if ((upload_ctx.size = _buildMessage(&_emailData, SimpleEmailHeaderLines,
+			to, from, fromName, toName, subject, body, _simpleEmailHeader, FALSE, filepath, filename)) == 0) {
+			return S_FALSE;
+		}
+	}
+	else {
+		if ((upload_ctx.size = _buildMessage(&_emailData, AttachmentEmailHeaderLines,
+			to, from, fromName, toName, subject, body, _emailWithAttachmentHeader, TRUE, filepath, filename)) == 0) {
+			return S_FALSE;
+		}
+	}
+
+	upload_ctx.data = _emailData;
+	curl = curl_easy_init();
+
+	if (curl) {
+
+		curl_easy_setopt(curl, CURLOPT_USERNAME, from);
+		curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+		curl_easy_setopt(curl, CURLOPT_URL, "smtp://smtp.gmail.com:587");
+		curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
+		curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
+		recipients = curl_slist_append(recipients, to);
+		curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+		curl_easy_setopt(curl, CURLOPT_READFUNCTION, _read_function_callback);
+		curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
+		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); //debug, turn it off on production
+		//curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent);
+
+		res = curl_easy_perform(curl);
+		curl_slist_free_all(recipients);
+		curl_easy_cleanup(curl);
+	}
+	else {
+		res = CURLE_FAILED_INIT;
+	}
+
+	Common::hFree(_emailData);
+
+	return (res == CURLE_OK ? S_OK : S_FALSE);
 }
 
 //collect new unseen emails ids

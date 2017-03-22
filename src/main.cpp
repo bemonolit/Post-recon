@@ -27,28 +27,26 @@ For more see the file 'LICENSE' for copying permission.
 #include "prCore.h"
 
 #define TO "xxxxxx@gmail.com"
-#define PASSWORD2 "xxxxxxx"
-#define ToNAME "xxxxxx"
+#define PASSWORD2 "xxxxx"
+#define ToNAME "xxxxx"
 
 #define FROM "yyyyy@gmail.com"
-#define PASSWORD "yyyyy"
-#define FromNAME "yyyyyyy"
-
+#define PASSWORD "yyyyyyy"
+#define FromNAME "yyyyyy"
 
 int main(void)
 {
-	char subject[50] = "Hello there";
-	char body[100] = "Test body\r\nnew line\r\ntest test\r\ntest";
-	int *ids;
+	char subject[50] = "Hello there Hello there";
+	char body[100] = "Test test test\r\ntest new line\r\nnew 1 2 3 4 test test\r\ntest";
+	//int *ids;
 	int i = 0;
 	int emails = 0;
 
 	Common::init();
 
 	//TESTING
-	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "");
-	//check if file EXISTS!!!!!!!!!!!
-	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\path\to\file\test.7z", "funny.7z", "libcurl-agent/1.0", 1L);
+	LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "", "", "libcurl-agent/1.0", 1L);
+	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "/path/to/funny.ext", "funny.ext", "libcurl-agent/1.0", 1L);
 
 	//TESTING
 	/*if ((emails = LibCurl::GetNewEmailsIDs(&ids, TO, PASSWORD2, "libcurl-agent/1.0", 1L)) != -1) {
