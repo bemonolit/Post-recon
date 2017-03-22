@@ -42,14 +42,15 @@ namespace Common
 	//free a memory block allocated from a heap by the hAlloc
 	void hFree(void *mem);
 
+	void SysFreeStr(wchar_t *str);
+
 	//zero a memory block
 	void hZero(void *mem, SIZE_T size);
 
 	//convert wchar* to char*
 	char* WcharToChar(const WCHAR *src, int slen);
 
-	//generate a new Message-ID for email.
-	HRESULT GenerateMessageID(const char *sender, SIZE_T senderLength, char **messageID);
+	int MemMoveW(wchar_t *destination, size_t numElements, const wchar_t *source, size_t count);
 
 	//get date, time and timezone offset
 	char *GetTimezoneOffset(void);

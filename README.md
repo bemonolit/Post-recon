@@ -11,6 +11,17 @@ Post-recon is a post-exploitation reconnaissance toolkit. Uses Gmail as a C&C se
 * Visual C++ toolset v140 (VS 2015).
 * libcurl 7.xx.x (https://curl.haxx.se/download.html).
 * Jsmn JSON parser (https://github.com/zserge/jsmn).
+* wbemuuid.lib (IWbemServices interface, WMI services)
+
+
+### Features
+
+**Computer unique id generation using system information/characteristics (SHA256 hash)**
+
+* CPU architecture
+* OS verion
+* CPU details
+* 
 
 
 

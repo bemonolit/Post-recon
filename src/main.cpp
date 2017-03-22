@@ -24,6 +24,7 @@ For more see the file 'LICENSE' for copying permission.
 #include <Windows.h>
 #include "prCommon.h"
 #include "prLibCurl.h"
+#include "prCore.h"
 
 #define TO "xxxxxx@gmail.com"
 #define PASSWORD2 "xxxxxxx"
@@ -44,17 +45,22 @@ int main(void)
 
 	Common::init();
 
+	//TESTING
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "");
 	//check if file EXISTS!!!!!!!!!!!
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\path\to\file\test.7z", "funny.7z", "libcurl-agent/1.0", 1L);
 
 	//TESTING
-	if ((emails = LibCurl::GetNewEmailsIDs(&ids, TO, PASSWORD2, "libcurl-agent/1.0", 1L)) != -1) {
+	/*if ((emails = LibCurl::GetNewEmailsIDs(&ids, TO, PASSWORD2, "libcurl-agent/1.0", 1L)) != -1) {
 		for (i = 0; i < emails; i++) {
 			LibCurl::ReceiveEmail(ids[i], TO, PASSWORD2, "libcurl-agent/1.0", 1L);
 		}
 		Common::hFree(ids);
-	}
+	}*/
+
+	//TESTING
+	Core::init();
+	Core::uninit();
 
 	return EXIT_SUCCESS;
 }

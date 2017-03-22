@@ -70,9 +70,12 @@ enum OSVersion
 
 namespace Core
 {
-	//system architecture
-	int SystemArchitecture(void);
+	//initialize core lib stuff
+	void init(void);
 
-	//system windows version
-	int SystemOsVersion(void);
+	//un-initialize core lib stuff
+	void uninit(void);
+
+	//client unique id
+	HRESULT UniqueID(char *id);
 }

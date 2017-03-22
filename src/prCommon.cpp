@@ -29,12 +29,14 @@ For more see the file 'LICENSE' for copying permission.
 
 static HANDLE processHeap;
 
+
 //retrieve a handle to the default heap of this process
 void Common::init(void)
 {
 	processHeap = GetProcessHeap();
 }
 
+//HeapAlloc wrapper
 //allocate a block of memory from a heap
 void* Common::hAlloc(SIZE_T size)
 {
@@ -43,6 +45,7 @@ void* Common::hAlloc(SIZE_T size)
 	return HeapAlloc(processHeap, HEAP_ZERO_MEMORY, size);
 }
 
+//HeapReAlloc wrapper
 void* Common::hReAlloc(void *mem, SIZE_T size)
 {
 	if (processHeap == NULL || mem == NULL || size <= 0) return NULL;
@@ -59,6 +62,7 @@ void Common::hFree(void *mem)
 	mem = NULL;
 }
 
+//SecureZeroMemory wrapper
 //Fills a block of memory with zeros. 
 void Common::hZero(void *mem, SIZE_T size)
 {
@@ -67,6 +71,22 @@ void Common::hZero(void *mem, SIZE_T size)
 	if (mem) {
 		SecureZeroMemory(mem, size);
 	}
+}
+
+//SysFreeString wrapper
+void Common::SysFreeStr(wchar_t *str)
+{
+	if (str == NULL) return;
+
+	SysFreeString(str);
+	str = NULL;
+}
+
+int Common::MemMoveW(wchar_t *destination, size_t numElements, const wchar_t *source, size_t count)
+{
+	if (destination == NULL || numElements <= 0 || source == NULL || count <= 0) return EINVAL;
+
+	return wmemmove_s(destination, numElements, source, count);
 }
 
 //convert wide char to ascii char
@@ -99,107 +119,7 @@ char* Common::WcharToChar(const WCHAR *src, int slen)
 	return dest;
 }
 
-HRESULT Common::GenerateMessageID(const char *sender, SIZE_T senderLength, char **messageID)
-{
-	if (sender == NULL || senderLength <= 0)return S_FALSE;
-
-	GUID pGuiId;
-	WCHAR sGuiId[64] = { 0 };
-	WCHAR sTrimId[64] = { 0 };
-
-	int strFromGuiSize = 0;
-	char *senderCopy = 0;
-	int domainSize = 50;
-	char domain[50] = { 0 };
-	char *context = 0;
-	char *tmp = 0;
-	char *sTrimIdA = 0;
-	int messageIDSize = 0;
-
-	//copy sender email
-	if ((senderCopy = (char*)hAlloc((senderLength + 1) * sizeof(char))) == NULL) {
-		return S_FALSE;
-	}
-
-	if (CopyString(senderCopy, senderLength + 1, sender) != 0) {
-		hFree(senderCopy);
-		return S_FALSE;
-	}
-
-	//get first token
-	if (strtok_s(senderCopy, "@", &context) == NULL) {
-		hFree(senderCopy);
-		return S_FALSE;
-	}
-
-	//Get email domain
-	if ((tmp = strtok_s(NULL, "@", &context)) == NULL) {
-		hFree(senderCopy);
-		return S_FALSE;
-	}
-
-	if (CopyString(domain, domainSize, tmp) != 0) {
-		hFree(senderCopy);
-		return S_FALSE;
-	}
-
-	hFree(senderCopy);
-
-	//Create a GUID, a unique 128-bit integer.
-	if (CoCreateGuid(&pGuiId) != S_OK) {
-		return S_FALSE;
-	}
-
-	//Convert a globally unique identifier (GUID) into a string of printable characters.
-	if ((strFromGuiSize = StringFromGUID2(pGuiId, sGuiId, _countof(sGuiId))) == 0) {
-		return S_FALSE;
-	}
-
-	//Remove { and } from generated GUID
-	if (wmemmove_s(sTrimId, 64, sGuiId + 1, strFromGuiSize - 3) != 0) {
-		return S_FALSE;
-	}
-
-	sTrimId[strFromGuiSize - 3] = '\0';
-
-	//Convert GUID to ascii
-	sTrimIdA = WcharToChar(sTrimId, 64);
-	if (sTrimIdA == NULL) {
-		return S_FALSE;
-	}
-
-	//messageID will store the final message-id value
-	messageIDSize = strlen(sTrimIdA) + 1 + strlen(domain) + 1;
-
-	*messageID = (char*)hAlloc(messageIDSize * sizeof(char));
-	if (*messageID == NULL) {
-		hFree(sTrimIdA);
-		return S_FALSE;
-	}
-
-	//copy trimmed guid to messageid e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	if (FormatString(*messageID, messageIDSize, "%s", sTrimIdA) == -1) {
-		hFree(sTrimIdA);
-		return S_FALSE;
-	}
-
-	//concat @ e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@
-	if (FormatString(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") == -1) {
-		hFree(sTrimIdA);
-		return S_FALSE;
-	}
-
-	//concat domain e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
-	if (FormatString(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) == -1) {
-		hFree(sTrimIdA);
-		return S_FALSE;
-	}
-
-	hFree(sTrimIdA);
-
-	return S_OK;
-}
-
+//get time zone offset e.g. +400
 char* Common::GetTimezoneOffset(void)
 {
 	struct tm lcl;
@@ -240,6 +160,7 @@ int Common::CopyString(char *destination, size_t sizeInBytes, const char *source
 	return strncpy_s(destination, sizeInBytes, source, _TRUNCATE);
 }
 
+//copy string
 int Common::CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max)
 {
 	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return EINVAL;

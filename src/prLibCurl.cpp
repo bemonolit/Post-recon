@@ -130,6 +130,108 @@ static size_t _read_function_callback(void *ptr, size_t size, size_t nmemb, void
 	return 0;
 }
 
+//generate email message id - xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
+static HRESULT GenerateMessageID(const char *sender, SIZE_T senderLength, char **messageID)
+{
+	if (sender == NULL || senderLength <= 0) return S_FALSE;
+
+	GUID pGuiId;
+	WCHAR sGuiId[64] = { 0 };
+	WCHAR sTrimId[64] = { 0 };
+
+	int strFromGuiSize = 0;
+	char *senderCopy = 0;
+	int domainSize = 50;
+	char domain[50] = { 0 };
+	char *context = 0;
+	char *tmp = 0;
+	char *sTrimIdA = 0;
+	int messageIDSize = 0;
+
+	//copy sender email
+	if ((senderCopy = (char*)Common::hAlloc((senderLength + 1) * sizeof(char))) == NULL) {
+		return S_FALSE;
+	}
+
+	if (Common::CopyString(senderCopy, senderLength + 1, sender) != 0) {
+		Common::hFree(senderCopy);
+		return S_FALSE;
+	}
+
+	//get first token
+	if (strtok_s(senderCopy, "@", &context) == NULL) {
+		Common::hFree(senderCopy);
+		return S_FALSE;
+	}
+
+	//Get email domain
+	if ((tmp = strtok_s(NULL, "@", &context)) == NULL) {
+		Common::hFree(senderCopy);
+		return S_FALSE;
+	}
+
+	if (Common::CopyString(domain, domainSize, tmp) != 0) {
+		Common::hFree(senderCopy);
+		return S_FALSE;
+	}
+
+	Common::hFree(senderCopy);
+
+	//Create a GUID, a unique 128-bit integer.
+	if (CoCreateGuid(&pGuiId) != S_OK) {
+		return S_FALSE;
+	}
+
+	//Convert a globally unique identifier (GUID) into a string of printable characters.
+	if ((strFromGuiSize = StringFromGUID2(pGuiId, sGuiId, _countof(sGuiId))) == 0) {
+		return S_FALSE;
+	}
+
+	//Remove { and } from generated GUID
+	if (Common::MemMoveW(sTrimId, 64, sGuiId + 1, strFromGuiSize - 3) != 0) {
+		return S_FALSE;
+	}
+
+	sTrimId[strFromGuiSize - 3] = '\0';
+
+	//Convert GUID to ascii
+	sTrimIdA = Common::WcharToChar(sTrimId, 64);
+	if (sTrimIdA == NULL) {
+		return S_FALSE;
+	}
+
+	//messageID will store the final message-id value
+	messageIDSize = strlen(sTrimIdA) + 1 + strlen(domain) + 1;
+
+	*messageID = (char*)Common::hAlloc(messageIDSize * sizeof(char));
+	if (*messageID == NULL) {
+		Common::hFree(sTrimIdA);
+		return S_FALSE;
+	}
+
+	//copy trimmed guid to messageid e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	if (Common::FormatString(*messageID, messageIDSize, "%s", sTrimIdA) == -1) {
+		Common::hFree(sTrimIdA);
+		return S_FALSE;
+	}
+
+	//concat @ e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@
+	if (Common::FormatString(*messageID + strlen(sTrimIdA), messageIDSize - strlen(sTrimIdA), "%s", "@") == -1) {
+		Common::hFree(sTrimIdA);
+		return S_FALSE;
+	}
+
+	//concat domain e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@example.com
+	if (Common::FormatString(*messageID + strlen(sTrimIdA) + 1, messageIDSize - strlen(sTrimIdA) - 1, "%s", domain) == -1) {
+		Common::hFree(sTrimIdA);
+		return S_FALSE;
+	}
+
+	Common::hFree(sTrimIdA);
+
+	return S_OK;
+}
+
 //build DATE string
 static int _buildDate(const char *format, char **result)
 {
@@ -186,7 +288,7 @@ static int _buildMessageID(const char *format, const char *from, char **result)
 	char *_messageID = 0;
 	int _size = 0;
 
-	if ((Common::GenerateMessageID(from, strlen(from), &_messageID)) == S_FALSE) {
+	if ((GenerateMessageID(from, strlen(from), &_messageID)) == S_FALSE) {
 		return -1;
 	}
 
