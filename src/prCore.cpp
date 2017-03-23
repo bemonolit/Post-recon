@@ -125,8 +125,6 @@ static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, cons
 		size = wcslen(v.bstrVal);
 
 		*buf = Common::WcharToChar(v.bstrVal, size);
-		//xwconcat(buf, buflen, vtProp.bstrVal);
-		//xwconcat(buf, buflen, L",");
 
 		VariantClear(&v);
 		pclsObj->Release();
@@ -311,7 +309,6 @@ static int CPU(char **buf)
 
 	if ((pEnumerator = (IEnumWbemClassObject *)wmiExecQuery(query)) == NULL) {
 		Common::SysFreeStr(query);
-		//Common::CopyString(buf, buflen, "invalid");
 		return -1;
 	}
 
@@ -378,6 +375,8 @@ void Core::init(void)
 	//TESTING
 	if (CPU(&cpu) != -1) {
 		Common::PrintDebug("CPU", cpu);
+		Common::hFree(cpu);
+		//cpu = NULL;
 	}
 
 	Common::SysFreeStr(resource);

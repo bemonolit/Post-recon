@@ -42,9 +42,6 @@ int main(void)
 	int i = 0;
 	int emails = 0;
 
-	Common::init();
-
-
 	//TESTING
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "", "", "libcurl-agent/1.0", 1L);
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "/path/to/funny.ext", "funny.ext", "libcurl-agent/1.0", 1L);

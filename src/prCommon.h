@@ -28,9 +28,6 @@ For more see the file 'LICENSE' for copying permission.
 
 namespace Common
 {
-	//initialize common lib stuff
-	void init(void);
-
 	//Allocates a block of memory from a heap.
 	void* hAlloc(SIZE_T size);
 

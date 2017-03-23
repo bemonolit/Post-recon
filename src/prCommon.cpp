@@ -28,20 +28,15 @@ For more see the file 'LICENSE' for copying permission.
 #include <wchar.h>
 #include <Strsafe.h>
 
-static HANDLE processHeap;
-
-
-//retrieve a handle to the default heap of this process
-void Common::init(void)
-{
-	processHeap = GetProcessHeap();
-}
 
 //HeapAlloc wrapper
 //allocate a block of memory from a heap
 void* Common::hAlloc(SIZE_T size)
 {
-	if (processHeap == NULL || size <= 0) return NULL;
+	if (size <= 0) return NULL;
+
+	HANDLE processHeap = GetProcessHeap();
+	if (processHeap == NULL)return NULL;
 
 	return HeapAlloc(processHeap, HEAP_ZERO_MEMORY, size);
 }
@@ -49,7 +44,10 @@ void* Common::hAlloc(SIZE_T size)
 //HeapReAlloc wrapper
 void* Common::hReAlloc(void *mem, SIZE_T size)
 {
-	if (processHeap == NULL || mem == NULL || size <= 0) return NULL;
+	if (mem == NULL || size <= 0) return NULL;
+
+	HANDLE processHeap = GetProcessHeap();
+	if (processHeap == NULL)return NULL;
 
 	return HeapReAlloc(processHeap, HEAP_ZERO_MEMORY, mem, size);
 }
@@ -57,7 +55,10 @@ void* Common::hReAlloc(void *mem, SIZE_T size)
 //free a memory block allocated from a heap by the HeapAlloc
 void Common::hFree(void *mem)
 {
-	if (processHeap == NULL || mem == NULL) return;
+	if (mem == NULL) return;
+
+	HANDLE processHeap = GetProcessHeap();
+	if (processHeap == NULL)return;
 
 	HeapFree(processHeap, 0, mem);
 	mem = NULL;
