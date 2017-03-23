@@ -25,6 +25,7 @@ For more see the file 'LICENSE' for copying permission.
 
 #include <windows.h>
 
+
 namespace Common
 {
 	//initialize common lib stuff
@@ -75,4 +76,7 @@ namespace Common
 
 	//split string
 	char **SplitString(int *count, const char *str, SIZE_T size, const char *delim);
+
+	//print string to vs debug output
+	void PrintDebug(char *title, char *str);
 }

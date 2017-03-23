@@ -124,7 +124,7 @@ static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, cons
 
 		size = wcslen(v.bstrVal);
 
-		//testing.. 
+		*buf = Common::WcharToChar(v.bstrVal, size);
 		//xwconcat(buf, buflen, vtProp.bstrVal);
 		//xwconcat(buf, buflen, L",");
 
@@ -377,7 +377,7 @@ void Core::init(void)
 
 	//TESTING
 	if (CPU(&cpu) != -1) {
-		printf("%s\n", cpu);
+		Common::PrintDebug("CPU", cpu);
 	}
 
 	Common::SysFreeStr(resource);

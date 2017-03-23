@@ -22,6 +22,7 @@ For more see the file 'LICENSE' for copying permission.
 */
 
 #include "prCommon.h"
+#include "prConfig.h"
 
 #include <time.h>
 #include <wchar.h>
@@ -82,6 +83,7 @@ void Common::SysFreeStr(wchar_t *str)
 	str = NULL;
 }
 
+//wmemmove_s wrapper
 int Common::MemMoveW(wchar_t *destination, size_t numElements, const wchar_t *source, size_t count)
 {
 	if (destination == NULL || numElements <= 0 || source == NULL || count <= 0) return EINVAL;
@@ -348,4 +350,14 @@ char **Common::SplitString(int *count, const char *str, SIZE_T size, const char 
 	hFree(strCopy);
 
 	return data;
+}
+
+void Common::PrintDebug(char *title, char *str)
+{
+#ifdef DEBUG
+	OutputDebugString(title);
+	OutputDebugString(": ");
+	OutputDebugString(str);
+	OutputDebugString("\n");
+#endif // DEBUG
 }

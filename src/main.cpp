@@ -44,9 +44,11 @@ int main(void)
 
 	Common::init();
 
+
 	//TESTING
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "", "", "libcurl-agent/1.0", 1L);
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "/path/to/funny.ext", "funny.ext", "libcurl-agent/1.0", 1L);
+
 
 	//TESTING
 	/*if ((emails = LibCurl::GetNewEmailsIDs(&ids, TO, PASSWORD2, "libcurl-agent/1.0", 1L)) != -1) {
@@ -55,6 +57,7 @@ int main(void)
 		}
 		Common::hFree(ids);
 	}*/
+
 
 	//TESTING
 	Core::init();

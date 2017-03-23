@@ -56,5 +56,8 @@
     <ClInclude Include="prSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="prConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
