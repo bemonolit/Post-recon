@@ -24,5 +24,5 @@ For more see the file 'LICENSE' for copying permission.
 */
 
 #define APP_VERSION "1.0"
-#define APP_DATE    "April, 2017"
+#define APP_DATE    "May, 2017"
 #define DEBUG	1

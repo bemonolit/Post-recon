@@ -31,5 +31,6 @@ typedef struct MimeMessage {
 
 namespace Mime
 {
+	//basic mime message parser
 	HRESULT ParseMime(MimeMessage *msg, const char *raw_data, int rawDataSize);
 }

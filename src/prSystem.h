@@ -28,5 +28,6 @@ For more see the file 'LICENSE' for copying permission.
 
 namespace System
 {
+	//check if a file exists
 	BOOL FileExists(const char *filename);
 }

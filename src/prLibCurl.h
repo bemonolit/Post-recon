@@ -27,8 +27,13 @@ For more see the file 'LICENSE' for copying permission.
 
 namespace LibCurl
 {
+	//send email
 	HRESULT SendEmail(const char *from, const char *fromName, const char *to, const char *toName, const char *subject, 
 		const char *body, const char *password, int sendAttachment, const char *filepath, const char *filename, const char *userAgent, long verbose);
+
+	//receive new emails IDs
 	int GetNewEmailsIDs(int **ids, const char *username, const char *password, const char *userAgent, long verbose);
+
+	//receive new email by id
 	HRESULT ReceiveEmail(int uid, const char *username, const char *password, const char *userAgent, long verbose);
 }
