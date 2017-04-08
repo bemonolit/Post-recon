@@ -24,6 +24,7 @@ For more see the file 'LICENSE' for copying permission.
 #include "prCore.h"
 #include "prCommon.h"
 #include <wbemidl.h>
+#include <VersionHelpers.h>
 #include <stdio.h>
 
 static IWbemLocator *_locator = 0;
@@ -254,25 +255,28 @@ static void* wmiConnect(wchar_t *resource)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 //check if we are running in a windows server
-static bool IsWindowsServer(void)
-{
-	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0,{ 0 }, 0, 0, 0, VER_NT_WORKSTATION };
-	DWORDLONG        const dwlConditionMask = VerSetConditionMask(0, VER_PRODUCT_TYPE, VER_EQUAL);
-
-	return !VerifyVersionInfo(&osvi, VER_PRODUCT_TYPE, dwlConditionMask);
-}
+//static bool IsWindowsServer(void)
+//{
+//	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0,{ 0 }, 0, 0, 0, VER_NT_WORKSTATION };
+//	DWORDLONG        const dwlConditionMask = VerSetConditionMask(0, VER_PRODUCT_TYPE, VER_EQUAL);
+//
+//	return !VerifyVersionInfo(&osvi, VER_PRODUCT_TYPE, dwlConditionMask);
+//}
 
 //check windows version
-static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinorVersion, unsigned short wServicePackMajor)//, int comparisonType)
+static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinorVersion, unsigned short wServicePackMajor)
 {
-	if (wMajorVersion < 0 || wMinorVersion < 0 || wServicePackMajor < 0 /*|| comparisonType < 0*/) return false;
+	if (wMajorVersion < 0 || wMinorVersion < 0 || wServicePackMajor < 0) return false;
 
-	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0,{ 0 }, 0, 0 };
-	DWORDLONG        const dwlConditionMask = VerSetConditionMask(VerSetConditionMask(VerSetConditionMask(
-		0, VER_MAJORVERSION, VER_GREATER_EQUAL),
-		VER_MINORVERSION, VER_GREATER_EQUAL),
-		VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+	DWORDLONG dwlConditionMask = 0;
+	OSVERSIONINFOEX osvi;
 
+	VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+	VER_SET_CONDITION(dwlConditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);
+	VER_SET_CONDITION(dwlConditionMask, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+
+	Common::hZero(&osvi, sizeof(OSVERSIONINFOEX));
+	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 	osvi.dwMajorVersion = wMajorVersion;
 	osvi.dwMinorVersion = wMinorVersion;
 	osvi.wServicePackMajor = wServicePackMajor;
@@ -281,10 +285,10 @@ static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinor
 }
 
 //is vista or greater??
-static bool IsWindowsVistaOrGreater(void)
-{
-	return IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0/*, VER_GREATER_EQUAL*/);
-}
+//static bool IsWindowsVistaOrGreater(void)
+//{
+//	return IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0/*, VER_GREATER_EQUAL*/);
+//}
 
 //get cpu architecture
 static int Architecture(void)
@@ -338,21 +342,21 @@ static int WinVer(void)
 		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WS03), LOBYTE(_WIN32_WINNT_WS03), 0))
 			return Windows_XP64PRO;
 		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINXP), LOBYTE(_WIN32_WINNT_WINXP), 0))
-			return Windows_XP;		
+			return Windows_XP;
 		else return Windows_Unknown;
 	}
 	else {
-		if (IsWindowsVersion(HIBYTE(WIN_S03), LOBYTE(WIN_S03), 0)) 
+		if (IsWindowsVersion(HIBYTE(WIN_S03), LOBYTE(WIN_S03), 0))
 			return Windows_S2003;
-		else if (IsWindowsVersion(HIBYTE(WIN_S08), LOBYTE(WIN_S08), 0)) 
+		else if (IsWindowsVersion(HIBYTE(WIN_S08), LOBYTE(WIN_S08), 0))
 			return Windows_S2008;
-		else if (IsWindowsVersion(HIBYTE(WIN_S08R2), LOBYTE(WIN_S08R2), 0)) 
+		else if (IsWindowsVersion(HIBYTE(WIN_S08R2), LOBYTE(WIN_S08R2), 0))
 			return Windows_S2008R2;
-		else if (IsWindowsVersion(HIBYTE(WIN_S12), LOBYTE(WIN_S12), 0)) 
+		else if (IsWindowsVersion(HIBYTE(WIN_S12), LOBYTE(WIN_S12), 0))
 			return Windows_S2012;
-		else if (IsWindowsVersion(HIBYTE(WIN_S12R2), LOBYTE(WIN_S12R2), 0)) 
+		else if (IsWindowsVersion(HIBYTE(WIN_S12R2), LOBYTE(WIN_S12R2), 0))
 			return Windows_S2012R2;
-		else if (IsWindowsVersion(HIBYTE(WIN_S16), LOBYTE(WIN_S16), 0)) 
+		else if (IsWindowsVersion(HIBYTE(WIN_S16), LOBYTE(WIN_S16), 0))
 			return Windows_S2016;
 		else return Windows_Unknown;
 	}
@@ -482,8 +486,6 @@ void Core::init(void)
 		Common::PrintDebug("Architecture", 3, "%s", "x86"); printf("Architecture: x86\n"); break;
 	case Arch_x64:
 		Common::PrintDebug("Architecture", 3, "%s", "x64"); printf("Architecture: x64\n"); break;
-	case Arch_Itanium:
-		Common::PrintDebug("Architecture", 7, "%s", "Itanium"); break;
 	default:
 		Common::PrintDebug("Architecture", 7, "%s", "unknown"); printf("Architecture: unknown\n"); break;
 	}
@@ -491,9 +493,9 @@ void Core::init(void)
 	//get os version(windowns)
 	switch (WinVer()) {
 	case  Windows_7:
-		Common::PrintDebug("Windows", 9, "%s", "Windows 7"); break;
+		Common::PrintDebug("Windows", 9, "%s", "Windows 7"); printf("Windows: Windows 7\n"); break;
 	case Windows_7SP1:
-		Common::PrintDebug("Windows", 13, "%s", "Windows 7 SP1"); break;
+		Common::PrintDebug("Windows", 13, "%s", "Windows 7 SP1"); printf("Windows 7 SP1\n"); break;
 	case Windows_8:
 		Common::PrintDebug("Windows", 10, "%s", "Windows 8"); printf("Windows: Windows 8\n"); break;
 	case Windows_81:
