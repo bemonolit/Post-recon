@@ -107,10 +107,13 @@ static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, cons
 	HRESULT result = S_FALSE;
 	HRESULT hres = WBEM_S_NO_ERROR;
 	int size = -1;
+	int totalSize = 0;
+	char *tmp = 0;
 
 	while (classObject && hres == WBEM_S_NO_ERROR)
 	{
 		hres = classObject->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+
 		if (FAILED(hres) || uReturn == 0) {
 			break;
 		}
@@ -123,14 +126,55 @@ static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, cons
 		}
 
 		size = wcslen(v.bstrVal);
+		tmp = Common::WcharToChar(v.bstrVal, size);
 
-		*buf = Common::WcharToChar(v.bstrVal, size);
+		if (*buf == NULL) {
+			totalSize = size + 1;
+
+			if ((*buf = (char*)Common::hAlloc(totalSize * sizeof(char))) == NULL) {
+				VariantClear(&v);
+				pclsObj->Release();
+				return -1;
+			}
+
+			if (Common::CopyString(*buf, totalSize, tmp) != 0) {
+				Common::hFree(*buf);
+				VariantClear(&v);
+				pclsObj->Release();
+				return -1;
+			}
+
+		}
+		else {
+			totalSize += strlen(*buf) + size + 2;
+
+			if ((*buf = (char*)Common::hReAlloc(*buf, totalSize)) == NULL) {
+				Common::hFree(*buf);
+				VariantClear(&v);
+				pclsObj->Release();
+				return -1;
+			}
+
+			if (Common::ConcatString(*buf, totalSize, ",") == S_FALSE) {
+				Common::hFree(*buf);
+				VariantClear(&v);
+				pclsObj->Release();
+				return -1;
+			}
+
+			if (Common::ConcatString(*buf, totalSize, tmp) == S_FALSE) {
+				Common::hFree(*buf);
+				VariantClear(&v);
+				pclsObj->Release();
+				return -1;
+			}
+		}
 
 		VariantClear(&v);
 		pclsObj->Release();
 	}
 
-	return size;
+	return totalSize - 1;
 }
 
 //create wmi instance/interface
@@ -219,16 +263,15 @@ static bool IsWindowsServer(void)
 }
 
 //check windows version
-static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinorVersion, unsigned short wServicePackMajor, int comparisonType)
+static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinorVersion, unsigned short wServicePackMajor)//, int comparisonType)
 {
-	if (wMajorVersion < 0 || wMinorVersion < 0 || wServicePackMajor < 0 || comparisonType < 0) return false;
+	if (wMajorVersion < 0 || wMinorVersion < 0 || wServicePackMajor < 0 /*|| comparisonType < 0*/) return false;
 
 	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0,{ 0 }, 0, 0 };
-	DWORDLONG        const dwlConditionMask = VerSetConditionMask(
-		VerSetConditionMask(VerSetConditionMask(
-			0, VER_MAJORVERSION, comparisonType),
-			VER_MINORVERSION, comparisonType),
-		VER_SERVICEPACKMAJOR, comparisonType);
+	DWORDLONG        const dwlConditionMask = VerSetConditionMask(VerSetConditionMask(VerSetConditionMask(
+		0, VER_MAJORVERSION, VER_GREATER_EQUAL),
+		VER_MINORVERSION, VER_GREATER_EQUAL),
+		VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
 
 	osvi.dwMajorVersion = wMajorVersion;
 	osvi.dwMinorVersion = wMinorVersion;
@@ -240,7 +283,7 @@ static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinor
 //is vista or greater??
 static bool IsWindowsVistaOrGreater(void)
 {
-	return IsWindowsVersion(HIBYTE(WIN_VISTA), LOBYTE(WIN_VISTA), 0, VER_GREATER_EQUAL);
+	return IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0/*, VER_GREATER_EQUAL*/);
 }
 
 //get cpu architecture
@@ -267,29 +310,50 @@ static int Architecture(void)
 }
 
 //get windows version
-static int OsVersion(void)
+static int WinVer(void)
 {
 	if (!IsWindowsServer()) {
-		if (IsWindowsVersion(HIBYTE(WIN_XP), LOBYTE(WIN_XP), 0, VER_EQUAL)) return Windows_XP;
-		else if (IsWindowsVersion(HIBYTE(WIN_XP64PRO), LOBYTE(WIN_XP64PRO), 0, VER_EQUAL)) return Windows_XP64PRO;
-		else if (IsWindowsVersion(HIBYTE(WIN_XP), LOBYTE(WIN_XP), 1, VER_EQUAL)) return Windows_XPSP1;
-		else if (IsWindowsVersion(HIBYTE(WIN_XP), LOBYTE(WIN_XP), 2, VER_EQUAL)) return Windows_XPSP2;
-		else if (IsWindowsVersion(HIBYTE(WIN_XP), LOBYTE(WIN_XP), 3, VER_EQUAL)) return Windows_XPSP3;
-		else if (IsWindowsVersion(HIBYTE(WIN_VISTA), LOBYTE(WIN_VISTA), 0, VER_EQUAL)) return Windows_VISTA;
-		else if (IsWindowsVersion(HIBYTE(WIN_VISTA), LOBYTE(WIN_VISTA), 1, VER_EQUAL)) return Windows_VISTASP1;
-		else if (IsWindowsVersion(HIBYTE(WIN_VISTA), LOBYTE(WIN_VISTA), 2, VER_EQUAL)) return Windows_VISTASP2;
-		else if (IsWindowsVersion(HIBYTE(WIN_WIN7), LOBYTE(WIN_WIN7), 0, VER_EQUAL)) return Windows_7;
-		else if (IsWindowsVersion(HIBYTE(WIN_WIN7), LOBYTE(WIN_WIN7), 1, VER_EQUAL)) return Windows_7SP1;
-		else if (IsWindowsVersion(HIBYTE(WIN_WIN8), LOBYTE(WIN_WIN8), 0, VER_EQUAL)) return Windows_8;
-		else if (IsWindowsVersion(HIBYTE(WIN_WIN81), LOBYTE(WIN_WIN81), 0, VER_EQUAL)) return Windows_81;
+		if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WIN10), LOBYTE(_WIN32_WINNT_WIN10), 0))
+			return Windows_10;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINBLUE), LOBYTE(_WIN32_WINNT_WINBLUE), 0))
+			return Windows_81;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WIN8), LOBYTE(_WIN32_WINNT_WIN8), 0))
+			return Windows_8;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WIN7), LOBYTE(_WIN32_WINNT_WIN7), 1))
+			return Windows_7SP1;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WIN7), LOBYTE(_WIN32_WINNT_WIN7), 0))
+			return Windows_7;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 2))
+			return Windows_VISTASP2;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 1))
+			return Windows_VISTASP1;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0))
+			return Windows_VISTA;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINXP), LOBYTE(_WIN32_WINNT_WINXP), 3))
+			return Windows_XPSP3;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINXP), LOBYTE(_WIN32_WINNT_WINXP), 2))
+			return Windows_XPSP2;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINXP), LOBYTE(_WIN32_WINNT_WINXP), 1))
+			return Windows_XPSP1;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WS03), LOBYTE(_WIN32_WINNT_WS03), 0))
+			return Windows_XP64PRO;
+		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINXP), LOBYTE(_WIN32_WINNT_WINXP), 0))
+			return Windows_XP;		
 		else return Windows_Unknown;
 	}
 	else {
-		if (IsWindowsVersion(HIBYTE(WIN_S03), LOBYTE(WIN_S03), 0, VER_EQUAL)) return Windows_S2003;
-		else if (IsWindowsVersion(HIBYTE(WIN_S08), LOBYTE(WIN_S08), 0, VER_EQUAL)) return Windows_S2008;
-		else if (IsWindowsVersion(HIBYTE(WIN_S08R2), LOBYTE(WIN_S08R2), 0, VER_EQUAL)) return Windows_S2008R2;
-		else if (IsWindowsVersion(HIBYTE(WIN_S12), LOBYTE(WIN_S12), 0, VER_EQUAL)) return Windows_S2012;
-		else if (IsWindowsVersion(HIBYTE(WIN_S12R2), LOBYTE(WIN_S12R2), 0, VER_EQUAL)) return Windows_S2012R2;
+		if (IsWindowsVersion(HIBYTE(WIN_S03), LOBYTE(WIN_S03), 0)) 
+			return Windows_S2003;
+		else if (IsWindowsVersion(HIBYTE(WIN_S08), LOBYTE(WIN_S08), 0)) 
+			return Windows_S2008;
+		else if (IsWindowsVersion(HIBYTE(WIN_S08R2), LOBYTE(WIN_S08R2), 0)) 
+			return Windows_S2008R2;
+		else if (IsWindowsVersion(HIBYTE(WIN_S12), LOBYTE(WIN_S12), 0)) 
+			return Windows_S2012;
+		else if (IsWindowsVersion(HIBYTE(WIN_S12R2), LOBYTE(WIN_S12R2), 0)) 
+			return Windows_S2012R2;
+		else if (IsWindowsVersion(HIBYTE(WIN_S16), LOBYTE(WIN_S16), 0)) 
+			return Windows_S2016;
 		else return Windows_Unknown;
 	}
 }
@@ -303,7 +367,7 @@ static int CPU(char **buf)
 	IEnumWbemClassObject *pEnumerator = NULL;
 	wchar_t *query;
 
-	if ((query = SysAllocString(L"SELECT Name FROM Win32_Processor")) == NULL) {
+	if ((query = SysAllocString(L"SELECT * FROM Win32_Processor")) == NULL) {
 		return -1;
 	}
 
@@ -320,10 +384,39 @@ static int CPU(char **buf)
 	return size;
 }
 
+//retrieve GPU details
+static int GPU(char **buf)
+{
+	if (_locator == NULL || _services == NULL) return -1;
+
+	int size = 0;
+	IEnumWbemClassObject *pEnumerator = NULL;
+	wchar_t *query;
+
+	if ((query = SysAllocString(L"SELECT Caption FROM Win32_VideoController")) == NULL) {
+		return -1;
+	}
+
+	if ((pEnumerator = (IEnumWbemClassObject *)wmiExecQuery(query)) == NULL) {
+		Common::SysFreeStr(query);
+		return -1;
+	}
+
+	size = wmiGetStringField(pEnumerator, buf, L"Caption");
+
+	pEnumerator->Release();
+	Common::SysFreeStr(query);
+
+	return size;
+}
+
 //initialize core library
 void Core::init(void)
 {
 	char *cpu = 0;
+	char *gpu = 0;
+	int cpuSize = 0;
+	int gpuSize = 0;
 	wchar_t *resource;
 
 	//init wmi
@@ -372,12 +465,54 @@ void Core::init(void)
 		Common::SysFreeStr(resource);
 	}
 
+	///////////////////////////////////////
 	//TESTING
-	if (CPU(&cpu) != -1) {
-		Common::PrintDebug("CPU", cpu);
+	printf("TESTING\n");
+
+	//get cpu
+	if ((cpuSize = CPU(&cpu)) != -1) {
+		Common::PrintDebug("CPU", cpuSize, "%s", cpu);
+		printf("CPU: %s\n", cpu);
 		Common::hFree(cpu);
-		//cpu = NULL;
 	}
+
+	//get architecture
+	switch (Architecture()) {
+	case  Arch_x86:
+		Common::PrintDebug("Architecture", 3, "%s", "x86"); printf("Architecture: x86\n"); break;
+	case Arch_x64:
+		Common::PrintDebug("Architecture", 3, "%s", "x64"); printf("Architecture: x64\n"); break;
+	case Arch_Itanium:
+		Common::PrintDebug("Architecture", 7, "%s", "Itanium"); break;
+	default:
+		Common::PrintDebug("Architecture", 7, "%s", "unknown"); printf("Architecture: unknown\n"); break;
+	}
+
+	//get os version(windowns)
+	switch (WinVer()) {
+	case  Windows_7:
+		Common::PrintDebug("Windows", 9, "%s", "Windows 7"); break;
+	case Windows_7SP1:
+		Common::PrintDebug("Windows", 13, "%s", "Windows 7 SP1"); break;
+	case Windows_8:
+		Common::PrintDebug("Windows", 10, "%s", "Windows 8"); printf("Windows: Windows 8\n"); break;
+	case Windows_81:
+		Common::PrintDebug("Windows", 11, "%s", "Windows 8.1"); printf("Windows: Windows 8.1\n"); break;
+	case Windows_10:
+		Common::PrintDebug("Windows", 10, "%s", "Windows 10"); printf("Windows: Windows 10\n"); break;
+	default:
+		Common::PrintDebug("Windows", 7, "%s", "unknown"); printf("Windows: unknown\n"); break;
+	}
+
+	//get cpu
+	if ((gpuSize = GPU(&gpu)) != -1) {
+		Common::PrintDebug("GPU", gpuSize, "%s", gpu);
+		printf("GPU: %s\n", gpu);
+		Common::hFree(gpu);
+	}
+
+	//END of TESTING
+	///////////////////////////////////////
 
 	Common::SysFreeStr(resource);
 }

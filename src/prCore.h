@@ -25,18 +25,14 @@ For more see the file 'LICENSE' for copying permission.
 
 #include <windows.h>
 
-#define WIN_XP			0x0501
-#define WIN_XP64PRO		0x0502
-#define WIN_VISTA		0x0600
-#define WIN_WIN7		0x0601
-#define WIN_WIN8		0x0602
-#define WIN_WIN81		0x0603
+#define _WIN32_WINNT_WIN10		0x0604
 
 #define WIN_S03			0x0502
 #define WIN_S08			0x0600
 #define WIN_S08R2		0x0601
 #define WIN_S12			0x0602
 #define WIN_S12R2		0x0603
+#define WIN_S16			0x0604
 
 enum Architecture
 {
@@ -65,7 +61,9 @@ enum OSVersion
 	Windows_S2012,
 	Windows_8,
 	Windows_S2012R2,
-	Windows_81
+	Windows_81,
+	Windows_10,
+	Windows_S2016
 };
 
 namespace Core

@@ -63,7 +63,10 @@ namespace Common
 	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source, size_t max);
 
 	//Writes formatted data to a string
-	int FormatString(char *buffer, const size_t sizeOfBuffer, char const* const format, ...);
+	int FormatString(char *destination, const size_t sizeInBytes, const char* format, ...);
+
+	//Writes formatted data to a string
+	int FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList);
 
 	//load file into memory
 	unsigned long LoadFileIntoMemory(const char *filename, unsigned char **data);
@@ -75,5 +78,5 @@ namespace Common
 	char **SplitString(int *count, const char *str, SIZE_T size, const char *delim);
 
 	//print string to vs debug output
-	void PrintDebug(char *title, char *str);
+	void PrintDebug(char *title, SIZE_T size, const char* format, ...);
 }

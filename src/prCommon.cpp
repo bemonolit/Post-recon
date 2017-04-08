@@ -194,7 +194,7 @@ HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *
 }
 
 //format string
-int Common::FormatString(char *destination, const size_t sizeInBytes, char const* const format, ...)
+int Common::FormatString(char *destination, const size_t sizeInBytes, const char* format, ...)
 {
 	if (destination == NULL || sizeInBytes <= 0 || format == NULL) return -1;
 
@@ -204,6 +204,18 @@ int Common::FormatString(char *destination, const size_t sizeInBytes, char const
 	va_start(argList, format);
 	result = _vsnprintf_s(destination, sizeInBytes, _TRUNCATE, format, argList);
 	va_end(argList);
+
+	return result;
+}
+
+//format string
+int Common::FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList)
+{
+	if (destination == NULL || sizeInBytes <= 0 || format == NULL) return -1;
+
+	int result = -1;
+
+	result = _vsnprintf_s(destination, sizeInBytes, _TRUNCATE, format, argList);
 
 	return result;
 }
@@ -353,12 +365,30 @@ char **Common::SplitString(int *count, const char *str, SIZE_T size, const char 
 	return data;
 }
 
-void Common::PrintDebug(char *title, char *str)
+void Common::PrintDebug(char *title, SIZE_T size, const char* format, ...)
 {
 #ifdef DEBUG
+	char *str = 0;
+	str = (char*)Common::hAlloc(size + 1 * sizeof(char));
+	if (str == NULL) {
+		return;
+	}
+
+	va_list argList;
+	va_start(argList, format);
+
+	if (Common::FormatString(str, size + 1, format, argList) == -1) {
+		Common::hFree(str);
+		return;
+	}
+
+	va_end(argList);
+
 	OutputDebugString(title);
 	OutputDebugString(": ");
 	OutputDebugString(str);
 	OutputDebugString("\n");
+
+	Common::hFree(str);
 #endif // DEBUG
 }
