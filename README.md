@@ -33,7 +33,7 @@ Post-recon is a post-exploitation reconnaissance toolkit. Uses Gmail as a C&C se
 
 
 
-### Disable protocols
+### Disable protocols (libcurl)
 
 * Open file \curl\lib\config-win32.h for editing.
 * Append the following code, before last endif line. (*#endif /* HEADER_CURL_CONFIG_WIN32_H */*):
@@ -67,6 +67,7 @@ cd \curl\winbuild\
 ```
 
 * Clean/Delete any previous builds
+* Path: \curl\builds\
 
 #### Build DLL
 
