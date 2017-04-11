@@ -316,7 +316,8 @@ static int Architecture(void)
 //get windows version
 static int WinVer(void)
 {
-	if (!IsWindowsServer()) {
+	if (!IsWindowsServer()) 
+	{
 		if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WIN10), LOBYTE(_WIN32_WINNT_WIN10), 0))
 			return Windows_10;
 		else if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WINBLUE), LOBYTE(_WIN32_WINNT_WINBLUE), 0))
@@ -345,7 +346,8 @@ static int WinVer(void)
 			return Windows_XP;
 		else return Windows_Unknown;
 	}
-	else {
+	else 
+	{
 		if (IsWindowsVersion(HIBYTE(WIN_S03), LOBYTE(WIN_S03), 0))
 			return Windows_S2003;
 		else if (IsWindowsVersion(HIBYTE(WIN_S08), LOBYTE(WIN_S08), 0))
