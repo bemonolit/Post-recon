@@ -26,28 +26,30 @@ For more see the file 'LICENSE' for copying permission.
 #include "prLibCurl.h"
 #include "prCore.h"
 
-#define TO "xxxxxx@gmail.com"
-#define PASSWORD2 "xxxxx"
-#define ToNAME "xxxxx"
+#define TO "xxxxx@gmail.com"
+#define PASSWORD2 "xxxxxxxx"
+#define ToNAME "xxxxxx"
 
-#define FROM "yyyyy@gmail.com"
-#define PASSWORD "yyyyyyy"
+#define FROM "yyyyyy@gmail.com"
+#define PASSWORD "yyyyyyyyyy"
 #define FromNAME "yyyyyy"
 
 int main(void)
 {
-	char subject[50] = "Hello there Hello there";
-	char body[100] = "Test test test\r\ntest new line\r\nnew 1 2 3 4 test test\r\ntest";
+	/*char subject[50] = "Hello there Hello there";
+	char body[100] = "Test test test\r\ntest new line\r\nnew 1 2 3 4 test test\r\ntest";*/
 	//int *ids;
-	int i = 0;
-	int emails = 0;
+	//int i = 0;
+	//int emails = 0;
 
 	//TESTING
+	
+	//send text email
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "", "", "libcurl-agent/1.0", 1L);
-	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "/path/to/funny.ext", "funny.ext", "libcurl-agent/1.0", 1L);
 
+	//send taxt email with attachment
+	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, TRUE, "\path\to\file\filename.jpg", "filename.jpg", "libcurl-agent/1.0", 1L);
 
-	//TESTING
 	/*if ((emails = LibCurl::GetNewEmailsIDs(&ids, TO, PASSWORD2, "libcurl-agent/1.0", 1L)) != -1) {
 		for (i = 0; i < emails; i++) {
 			LibCurl::ReceiveEmail(ids[i], TO, PASSWORD2, "libcurl-agent/1.0", 1L);
@@ -55,10 +57,13 @@ int main(void)
 		Common::hFree(ids);
 	}*/
 
+	//END of TESTING
+
 
 	//TESTING
 	Core::init();
 	Core::uninit();
+	//END of TESTING
 
 	return EXIT_SUCCESS;
 }

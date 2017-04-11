@@ -65,9 +65,6 @@ namespace Common
 	//Writes formatted data to a string
 	int FormatString(char *destination, const size_t sizeInBytes, const char* format, ...);
 
-	//Writes formatted data to a string
-	int FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList);
-
 	//load file into memory
 	unsigned long LoadFileIntoMemory(const char *filename, unsigned char **data);
 

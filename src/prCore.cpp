@@ -316,7 +316,7 @@ static int Architecture(void)
 //get windows version
 static int WinVer(void)
 {
-	if (!IsWindowsServer()) 
+	if (!IsWindowsServer())
 	{
 		if (IsWindowsVersion(HIBYTE(_WIN32_WINNT_WIN10), LOBYTE(_WIN32_WINNT_WIN10), 0))
 			return Windows_10;
@@ -346,7 +346,7 @@ static int WinVer(void)
 			return Windows_XP;
 		else return Windows_Unknown;
 	}
-	else 
+	else
 	{
 		if (IsWindowsVersion(HIBYTE(WIN_S03), LOBYTE(WIN_S03), 0))
 			return Windows_S2003;
@@ -364,34 +364,8 @@ static int WinVer(void)
 	}
 }
 
-//get CPU details
-static int CPU(char **buf)
-{
-	if (_locator == NULL || _services == NULL) return -1;
-
-	int size = 0;
-	IEnumWbemClassObject *pEnumerator = NULL;
-	wchar_t *query;
-
-	if ((query = SysAllocString(L"SELECT * FROM Win32_Processor")) == NULL) {
-		return -1;
-	}
-
-	if ((pEnumerator = (IEnumWbemClassObject *)wmiExecQuery(query)) == NULL) {
-		Common::SysFreeStr(query);
-		return -1;
-	}
-
-	size = wmiGetStringField(pEnumerator, buf, L"Name");
-
-	pEnumerator->Release();
-	Common::SysFreeStr(query);
-
-	return size;
-}
-
 //retrieve GPU details
-static int GPU(char **buf)
+static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldname)
 {
 	if (_locator == NULL || _services == NULL) return -1;
 
@@ -399,7 +373,7 @@ static int GPU(char **buf)
 	IEnumWbemClassObject *pEnumerator = NULL;
 	wchar_t *query;
 
-	if ((query = SysAllocString(L"SELECT Caption FROM Win32_VideoController")) == NULL) {
+	if ((query = SysAllocString(queryStr)) == NULL) {
 		return -1;
 	}
 
@@ -408,7 +382,7 @@ static int GPU(char **buf)
 		return -1;
 	}
 
-	size = wmiGetStringField(pEnumerator, buf, L"Caption");
+	size = wmiGetStringField(pEnumerator, buf, fieldname);
 
 	pEnumerator->Release();
 	Common::SysFreeStr(query);
@@ -476,7 +450,7 @@ void Core::init(void)
 	printf("TESTING\n");
 
 	//get cpu
-	if ((cpuSize = CPU(&cpu)) != -1) {
+	if ((cpuSize = getValue(&cpu, L"SELECT * FROM Win32_Processor", L"Name")) != -1) {
 		Common::PrintDebug("CPU", cpuSize, "%s", cpu);
 		printf("CPU: %s\n", cpu);
 		Common::hFree(cpu);
@@ -509,7 +483,7 @@ void Core::init(void)
 	}
 
 	//get cpu
-	if ((gpuSize = GPU(&gpu)) != -1) {
+	if ((gpuSize = getValue(&gpu, L"SELECT Caption FROM Win32_VideoController", L"Caption")) != -1) {
 		Common::PrintDebug("GPU", gpuSize, "%s", gpu);
 		printf("GPU: %s\n", gpu);
 		Common::hFree(gpu);

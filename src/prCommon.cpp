@@ -28,6 +28,17 @@ For more see the file 'LICENSE' for copying permission.
 #include <wchar.h>
 #include <Strsafe.h>
 
+//format string
+static int _FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList)
+{
+	if (destination == NULL || sizeInBytes <= 0 || format == NULL) return -1;
+
+	int result = -1;
+
+	result = _vsnprintf_s(destination, sizeInBytes, _TRUNCATE, format, argList);
+
+	return result;
+}
 
 //HeapAlloc wrapper
 //allocate a block of memory from a heap
@@ -208,18 +219,6 @@ int Common::FormatString(char *destination, const size_t sizeInBytes, const char
 	return result;
 }
 
-//format string
-int Common::FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList)
-{
-	if (destination == NULL || sizeInBytes <= 0 || format == NULL) return -1;
-
-	int result = -1;
-
-	result = _vsnprintf_s(destination, sizeInBytes, _TRUNCATE, format, argList);
-
-	return result;
-}
-
 //load file into memory
 unsigned long Common::LoadFileIntoMemory(const char *filename, unsigned char **data)
 {
@@ -377,7 +376,7 @@ void Common::PrintDebug(char *title, SIZE_T size, const char* format, ...)
 	va_list argList;
 	va_start(argList, format);
 
-	if (Common::FormatString(str, size + 1, format, argList) == -1) {
+	if (_FormatString(str, size + 1, format, argList) == -1) {
 		Common::hFree(str);
 		return;
 	}
