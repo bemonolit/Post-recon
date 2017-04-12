@@ -66,7 +66,7 @@ static bool wmiInitialize(void)
 }
 
 //execute wmi query
-static void* wmiExecQuery(wchar_t *query)
+static void* wmiExecQuery(wchar_t *query, bool forwardOnly)
 {
 	if (_services == NULL || query == NULL || SysStringLen(query) == 0) return NULL;
 
@@ -81,7 +81,7 @@ static void* wmiExecQuery(wchar_t *query)
 	result = _services->ExecQuery(
 		language,
 		query,
-		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+		forwardOnly ? (WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY) : WBEM_FLAG_RETURN_IMMEDIATELY,
 		NULL,
 		&pEnumerator);
 
@@ -99,9 +99,9 @@ static void* wmiExecQuery(wchar_t *query)
 }
 
 //retrieve string field value
-static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, const wchar_t *fieldname)
+static int wmiGetStringField(IEnumWbemClassObject *enumerator, char **buf, const wchar_t *fieldname)
 {
-	if (classObject == NULL || fieldname == NULL || wcslen(fieldname) == 0) return -1;
+	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return -1;
 
 	IWbemClassObject *pclsObj = NULL;
 	ULONG uReturn = 0;
@@ -110,16 +110,16 @@ static int wmiGetStringField(IEnumWbemClassObject *classObject, char **buf, cons
 	int size = -1;
 	int totalSize = 0;
 	char *tmp = 0;
+	VARIANT v;
 
-	while (classObject && hres == WBEM_S_NO_ERROR)
+	while (enumerator && hres == WBEM_S_NO_ERROR)
 	{
-		hres = classObject->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+		hres = enumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
 
 		if (FAILED(hres) || uReturn == 0) {
 			break;
 		}
 
-		VARIANT v;
 		result = pclsObj->Get(fieldname, 0, &v, 0, 0);
 		if (FAILED(result) /*|| V_VT(&vtProp) != VT_BSTR*/) {
 			pclsObj->Release();
@@ -254,15 +254,6 @@ static void* wmiConnect(wchar_t *resource)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-//check if we are running in a windows server
-//static bool IsWindowsServer(void)
-//{
-//	OSVERSIONINFOEX osvi = { sizeof(osvi), 0, 0, 0, 0,{ 0 }, 0, 0, 0, VER_NT_WORKSTATION };
-//	DWORDLONG        const dwlConditionMask = VerSetConditionMask(0, VER_PRODUCT_TYPE, VER_EQUAL);
-//
-//	return !VerifyVersionInfo(&osvi, VER_PRODUCT_TYPE, dwlConditionMask);
-//}
-
 //check windows version
 static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinorVersion, unsigned short wServicePackMajor)
 {
@@ -283,12 +274,6 @@ static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinor
 
 	return VerifyVersionInfo(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, dwlConditionMask) != false;
 }
-
-//is vista or greater??
-//static bool IsWindowsVistaOrGreater(void)
-//{
-//	return IsWindowsVersion(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0/*, VER_GREATER_EQUAL*/);
-//}
 
 //get cpu architecture
 static int Architecture(void)
@@ -364,7 +349,7 @@ static int WinVer(void)
 	}
 }
 
-//retrieve GPU details
+//retrieve information
 static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldname)
 {
 	if (_locator == NULL || _services == NULL) return -1;
@@ -377,7 +362,7 @@ static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldnam
 		return -1;
 	}
 
-	if ((pEnumerator = (IEnumWbemClassObject *)wmiExecQuery(query)) == NULL) {
+	if ((pEnumerator = (IEnumWbemClassObject *)wmiExecQuery(query, true)) == NULL) {
 		Common::SysFreeStr(query);
 		return -1;
 	}
@@ -390,13 +375,169 @@ static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldnam
 	return size;
 }
 
+//retrieve motherboard details
+static int MotherBoard(char **buf)
+{
+	if (_locator == NULL || _services == NULL) return -1;
+
+	IEnumWbemClassObject *enumerator = NULL;
+	int size = 0;
+	int tmp = 0;
+	wchar_t *query;
+	char *manufacturer = 0;
+	char *product = 0;
+	char *serial = 0;
+
+	if ((query = SysAllocString(L"Select * from Win32_BaseBoard")) == NULL) {
+		return -1;
+	}
+
+	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(query, false)) == NULL) {
+		Common::SysFreeStr(query);
+		return -1;
+	}
+
+	if ((tmp = wmiGetStringField(enumerator, &manufacturer, L"Manufacturer")) == -1) {
+		Common::hFree(manufacturer);
+		enumerator->Release();
+		Common::SysFreeStr(query);
+		return -1;
+	}
+	size += tmp;
+	if (enumerator->Reset() != WBEM_S_NO_ERROR) {
+		Common::hFree(manufacturer);
+		enumerator->Release();
+		Common::SysFreeStr(query);
+		return -1;
+	}
+
+	if ((tmp = wmiGetStringField(enumerator, &product, L"Product")) == -1) {
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		enumerator->Release();
+		Common::SysFreeStr(query);
+		return -1;
+	}
+	size += tmp;
+	if (enumerator->Reset() != WBEM_S_NO_ERROR) {
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		enumerator->Release();
+		Common::SysFreeStr(query);
+		return -1;
+	}
+
+	if ((tmp = wmiGetStringField(enumerator, &serial, L"SerialNumber")) == -1) {
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		enumerator->Release();
+		Common::SysFreeStr(query);
+	}
+	size += tmp + 3;	//2 spaces and a null character
+
+	if ((*buf = (char*)Common::hAlloc(size * sizeof(char))) == NULL) {
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		enumerator->Release();
+		Common::SysFreeStr(query);
+		return -1;
+	}
+
+	if (Common::ConcatString(*buf, size, manufacturer) == S_FALSE) {
+		Common::hFree(*buf);
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		Common::SysFreeStr(query);
+		enumerator->Release();
+		return -1;
+	}
+
+	if (Common::ConcatString(*buf, size, " ") == S_FALSE) {
+		Common::hFree(*buf);
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		Common::SysFreeStr(query);
+		enumerator->Release();
+		return -1;
+	}
+
+	if (Common::ConcatString(*buf, size, product) == S_FALSE) {
+		Common::hFree(*buf);
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		Common::SysFreeStr(query);
+		enumerator->Release();
+		return -1;
+	}
+
+	if (Common::ConcatString(*buf, size, " ") == S_FALSE) {
+		Common::hFree(*buf);
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		Common::SysFreeStr(query);
+		enumerator->Release();
+		return -1;
+	}
+
+	if (Common::ConcatString(*buf, size, serial) == S_FALSE) {
+		Common::hFree(*buf);
+		Common::hFree(manufacturer);
+		Common::hFree(product);
+		Common::hFree(serial);
+		Common::SysFreeStr(query);
+		enumerator->Release();
+		return -1;
+	}
+
+	Common::hFree(manufacturer);
+	Common::hFree(product);
+	Common::hFree(serial);
+	enumerator->Release();
+	Common::SysFreeStr(query);
+
+	return size - 1;
+}
+
+//check if user is administrator
+static bool isAdmin(void) {
+
+	BOOL isadmin = FALSE;
+	SID_IDENTIFIER_AUTHORITY NtAuthority = { SECURITY_NT_AUTHORITY };
+	PSID AdministratorsGroup;
+
+	isadmin = AllocateAndInitializeSid(
+		&NtAuthority, 2,
+		SECURITY_BUILTIN_DOMAIN_RID,
+		DOMAIN_ALIAS_RID_ADMINS,
+		0, 0, 0, 0, 0, 0,
+		&AdministratorsGroup);
+
+	if (isadmin) {
+		if (!CheckTokenMembership(NULL, AdministratorsGroup, &isadmin))
+			isadmin = FALSE;
+		FreeSid(AdministratorsGroup);
+	}
+
+	return isadmin == FALSE ? false : true;
+}
+
 //initialize core library
 void Core::init(void)
 {
 	char *cpu = 0;
 	char *gpu = 0;
+	char *motherBoard = 0;
+
 	int cpuSize = 0;
 	int gpuSize = 0;
+	int motherBoardSize = 0;
+
 	wchar_t *resource;
 
 	//init wmi
@@ -487,6 +628,17 @@ void Core::init(void)
 		Common::PrintDebug("GPU", gpuSize, "%s", gpu);
 		printf("GPU: %s\n", gpu);
 		Common::hFree(gpu);
+	}
+
+	//is admin?
+	printf("Is Admin? %s\n", (isAdmin() ? "yes" : "no"));
+	Common::PrintDebug("Is Admin?", 3, "%s", (isAdmin() ? "yes" : "no"));
+
+	//get motherBoard
+	if ((motherBoardSize = MotherBoard(&motherBoard)) != -1) {
+		Common::PrintDebug("Motherboard", motherBoardSize, "%s", motherBoard);
+		printf("Motherboard: %s\n", motherBoard);
+		Common::hFree(motherBoard);
 	}
 
 	//END of TESTING
