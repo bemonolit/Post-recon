@@ -650,6 +650,7 @@ static unsigned long getRam(void)
 	return (unsigned long)(statex.ullTotalPhys / (1024.0 * 1024.0));
 }
 
+//get first physical address
 static int getFirstMacAddress(char **buf)
 {
 	unsigned long size = 0;
@@ -677,6 +678,7 @@ static int getFirstMacAddress(char **buf)
 			continue;
 
 		if ((*buf = (char*)Common::hAlloc((macSize + 1) * sizeof(char))) == NULL) {
+			Common::hFree(pAddresses);
 			return -1;
 		}
 
@@ -686,11 +688,14 @@ static int getFirstMacAddress(char **buf)
 			pAddresses->PhysicalAddress[4], pAddresses->PhysicalAddress[5]) == -1)
 		{
 			Common::hFree(*buf);
+			Common::hFree(pAddresses);
 			return -1;
 		}
 
 		break;
 	}
+
+	Common::hFree(pAddresses);
 
 	return macSize;
 }
