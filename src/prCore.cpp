@@ -638,6 +638,19 @@ static unsigned long getPc(char **buf)
 	return size;
 }
 
+//get total available ram
+static unsigned long getRam(void)
+{
+	MEMORYSTATUSEX statex;
+	statex.dwLength = sizeof(statex);
+
+	if (GlobalMemoryStatusEx(&statex) == 0) {
+		return 0;
+	}
+
+	return (unsigned long)(statex.ullTotalPhys / (1024.0 * 1024.0));
+}
+
 //initialize core library
 void Core::init(void)
 {
@@ -652,6 +665,7 @@ void Core::init(void)
 	int motherBoardSize = 0;
 	unsigned long usernameSize = 0;
 	unsigned long pcSize = 0;
+	unsigned long totalRam = 0;
 
 	wchar_t *resource;
 
@@ -786,6 +800,11 @@ void Core::init(void)
 		printf("PC name: %s\n", pcname);
 		Common::hFree(pcname);
 	}
+
+	//get ram
+	totalRam = getRam();
+	Common::PrintDebug("RAM", pcSize, "%lu MB", totalRam);
+	printf("RAM: %lu MB\n", totalRam);
 
 	//END of TESTING
 	///////////////////////////////////////
