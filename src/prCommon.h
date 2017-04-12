@@ -23,8 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
+#include <winsock2.h>
 #include <windows.h>
-
+#include <iphlpapi.h>
 
 namespace Common
 {

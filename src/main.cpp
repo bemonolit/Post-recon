@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#include <Windows.h>
 #include "prCommon.h"
 #include "prLibCurl.h"
 #include "prCore.h"

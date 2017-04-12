@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#include "prMime.h"
 #include "prCommon.h"
+#include "prMime.h"
 #include <stdio.h>
 
 //works only for reading new/unseen emails(not forwarded or replied) from gmail. (utf8)

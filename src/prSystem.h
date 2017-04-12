@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#include <windows.h>
+//#include <windows.h>
 #include <Shlwapi.h>
 
 namespace System

@@ -21,10 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#include "prLibCurl.h"
-
-#include <curl/curl.h>
 #include "prCommon.h"
+#include "prLibCurl.h"
+#include <curl/curl.h>
 #include "prMime.h"
 #include <Strsafe.h>
 #include <string.h>

@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 For more see the file 'LICENSE' for copying permission.
 */
 
-#include "prCore.h"
 #include "prCommon.h"
+#include "prCore.h"
 #include <wbemidl.h>
 #include <VersionHelpers.h>
 #include <stdio.h>
@@ -247,7 +247,6 @@ static void* wmiCreate(void)
 	return locator;
 }
 
-
 //connect to wmi services
 static void* wmiConnect(wchar_t *resource)
 {
@@ -447,7 +446,7 @@ static unsigned short getValue(const wchar_t *queryStr, const wchar_t *fieldname
 }
 
 //retrieve motherboard details
-static int MotherBoard(char **buf)
+static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldname1, const wchar_t *fieldname2, const wchar_t *fieldname3)
 {
 	if (_locator == NULL || _services == NULL) return -1;
 
@@ -459,7 +458,7 @@ static int MotherBoard(char **buf)
 	char *product = 0;
 	char *serial = 0;
 
-	if ((query = SysAllocString(L"Select * from Win32_BaseBoard")) == NULL) {
+	if ((query = SysAllocString(queryStr)) == NULL) {
 		return -1;
 	}
 
@@ -468,7 +467,7 @@ static int MotherBoard(char **buf)
 		return -1;
 	}
 
-	if ((tmp = wmiGetStringField(enumerator, &manufacturer, L"Manufacturer")) == -1) {
+	if ((tmp = wmiGetStringField(enumerator, &manufacturer, fieldname1)) == -1) {
 		Common::hFree(manufacturer);
 		enumerator->Release();
 		Common::SysFreeStr(query);
@@ -482,7 +481,7 @@ static int MotherBoard(char **buf)
 		return -1;
 	}
 
-	if ((tmp = wmiGetStringField(enumerator, &product, L"Product")) == -1) {
+	if ((tmp = wmiGetStringField(enumerator, &product, fieldname2)) == -1) {
 		Common::hFree(manufacturer);
 		Common::hFree(product);
 		enumerator->Release();
@@ -498,7 +497,7 @@ static int MotherBoard(char **buf)
 		return -1;
 	}
 
-	if ((tmp = wmiGetStringField(enumerator, &serial, L"SerialNumber")) == -1) {
+	if ((tmp = wmiGetStringField(enumerator, &serial, fieldname3)) == -1) {
 		Common::hFree(manufacturer);
 		Common::hFree(product);
 		Common::hFree(serial);
@@ -651,6 +650,51 @@ static unsigned long getRam(void)
 	return (unsigned long)(statex.ullTotalPhys / (1024.0 * 1024.0));
 }
 
+static int getFirstMacAddress(char **buf)
+{
+	unsigned long size = 0;
+	int macSize = 17;
+	PIP_ADAPTER_ADDRESSES pAddresses;
+
+	(void)GetAdaptersAddresses(0, 0, 0, 0, &size);
+
+	if (!size) {
+		return -1;
+	}
+
+	if ((pAddresses = (IP_ADAPTER_ADDRESSES*)Common::hAlloc(size)) == NULL) {
+		return -1;
+	}
+
+	if (GetAdaptersAddresses(0, 0, 0, pAddresses, &size) != NO_ERROR) {
+		Common::hFree(pAddresses);
+		return -1;
+	}
+
+	while (pAddresses)
+	{
+		if (pAddresses->PhysicalAddressLength != 6)
+			continue;
+
+		if ((*buf = (char*)Common::hAlloc((macSize + 1) * sizeof(char))) == NULL) {
+			return -1;
+		}
+
+		if (Common::FormatString(*buf, macSize + 1, "%02X-%02X-%02X-%02X-%02X-%02X",
+			pAddresses->PhysicalAddress[0], pAddresses->PhysicalAddress[1],
+			pAddresses->PhysicalAddress[2], pAddresses->PhysicalAddress[3],
+			pAddresses->PhysicalAddress[4], pAddresses->PhysicalAddress[5]) == -1)
+		{
+			Common::hFree(*buf);
+			return -1;
+		}
+
+		break;
+	}
+
+	return macSize;
+}
+
 //initialize core library
 void Core::init(void)
 {
@@ -659,10 +703,15 @@ void Core::init(void)
 	char *motherBoard = 0;
 	char *username = 0;
 	char *pcname = 0;
+	char *bios = 0;
+	char *mac = 0;
 
 	int cpuSize = 0;
 	int gpuSize = 0;
 	int motherBoardSize = 0;
+	int biosSize = 0;
+	int macSize = 0;
+
 	unsigned long usernameSize = 0;
 	unsigned long pcSize = 0;
 	unsigned long totalRam = 0;
@@ -766,7 +815,7 @@ void Core::init(void)
 	Common::PrintDebug("Is Admin?", 3, "%s", (isAdmin() ? "yes" : "no"));
 
 	//get motherBoard
-	if ((motherBoardSize = MotherBoard(&motherBoard)) != -1) {
+	if ((motherBoardSize = getValue(&motherBoard, L"Select * from Win32_BaseBoard", L"Manufacturer", L"Product", L"SerialNumber")) != -1) {
 		Common::PrintDebug("Motherboard", motherBoardSize, "%s", motherBoard);
 		printf("Motherboard: %s\n", motherBoard);
 		Common::hFree(motherBoard);
@@ -805,6 +854,20 @@ void Core::init(void)
 	totalRam = getRam();
 	Common::PrintDebug("RAM", pcSize, "%lu MB", totalRam);
 	printf("RAM: %lu MB\n", totalRam);
+
+	//get bios
+	if ((biosSize = getValue(&bios, L"Select * from Win32_BIOS", L"Caption", L"Manufacturer", L"SerialNumber")) != -1) {
+		Common::PrintDebug("Bios", biosSize, "%s", bios);
+		printf("Bios: %s\n", bios);
+		Common::hFree(bios);
+	}
+
+	//get first mac address
+	if ((macSize = getFirstMacAddress(&mac)) != -1) {
+		Common::PrintDebug("First MAC address", macSize, "%s", mac);
+		printf("First MAC address: %s\n", mac);
+		Common::hFree(mac);
+	}
 
 	//END of TESTING
 	///////////////////////////////////////
