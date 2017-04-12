@@ -26,6 +26,7 @@ For more see the file 'LICENSE' for copying permission.
 #include <wbemidl.h>
 #include <VersionHelpers.h>
 #include <stdio.h>
+#include <security.h>
 
 static IWbemLocator *_locator = 0;
 static IWbemServices *_services = 0;
@@ -597,16 +598,38 @@ static bool isAdmin(void) {
 	return isadmin == FALSE ? false : true;
 }
 
+//get current username
+static unsigned long getUser(char **buf)
+{
+	unsigned long size = 0;
+	(void)GetUserNameEx(NameSamCompatible, NULL, &size);
+
+	if ((*buf = (char*)Common::hAlloc(size * sizeof(char))) == NULL) {
+		return -1;
+	}
+
+	if (GetUserNameEx(NameSamCompatible, *buf, &size) == 0) {
+		Common::hFree(*buf);
+		return -1;
+	}
+
+	(*buf)[size] = 0;
+
+	return size;
+}
+
 //initialize core library
 void Core::init(void)
 {
 	char *cpu = 0;
 	char *gpu = 0;
 	char *motherBoard = 0;
+	char *username = 0;
 
 	int cpuSize = 0;
 	int gpuSize = 0;
 	int motherBoardSize = 0;
+	unsigned long usernameSize = 0;
 
 	wchar_t *resource;
 
@@ -726,6 +749,13 @@ void Core::init(void)
 		Common::PrintDebug("Chassis Type", 5, "%s", "Notebook"); printf("Chassis Type: Notebook\n"); break;
 	default:
 		Common::PrintDebug("Chassis Type", 7, "%s", "unknown"); printf("Chassis Type: unknown\n"); break;
+	}
+
+	//get username
+	if ((usernameSize = getUser(&username)) != -1) {
+		Common::PrintDebug("Username", usernameSize, "%s", username);
+		printf("Username: %s\n", username);
+		Common::hFree(username);
 	}
 
 	//END of TESTING

@@ -25,6 +25,8 @@ For more see the file 'LICENSE' for copying permission.
 
 #include <windows.h>
 
+#define SECURITY_WIN32
+
 #define _WIN32_WINNT_WIN10		0x0A00
 
 #define WIN_S03			0x0502
