@@ -66,6 +66,34 @@ enum OSVersion
 	Windows_S2016
 };
 
+enum ChassisType
+{
+	ChassisType_Other = 1,
+	ChassisType_Unknown = 2,
+	ChassisType_Desktop = 3,
+	ChassisType_LowProfileDesktop = 4,
+	ChassisType_PizzaBox = 5,
+	ChassisType_MiniTower = 6,
+	ChassisType_Tower = 7,
+	ChassisType_Portable = 8,
+	ChassisType_Laptop = 9,
+	ChassisType_Notebook = 10,
+	ChassisType_Handheld = 11,
+	ChassisType_DockingStation = 12,
+	ChassisType_AllInOne = 13,
+	ChassisType_SubNotebook = 14,
+	ChassisType_SpaceSaving = 15,
+	ChassisType_LunchBox = 16,
+	ChassisType_MainSystemChassis = 17,
+	ChassisType_ExpansionChassis = 18,
+	ChassisType_SubChassis = 19,
+	ChassisType_BusExpansionChassis = 20,
+	ChassisType_PeripheralChassis = 21,
+	ChassisType_StorageChassis = 22,
+	ChassisType_RackMountChassis = 23,
+	ChassisType_SealedCasePC = 24
+};
+
 namespace Core
 {
 	//initialize core lib stuff

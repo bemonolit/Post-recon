@@ -98,6 +98,52 @@ static void* wmiExecQuery(wchar_t *query, bool forwardOnly)
 	return pEnumerator;
 }
 
+static int wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const WCHAR *fieldname)
+{
+	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return -1;
+
+	IWbemClassObject *pclsObj = NULL;
+	ULONG uReturn = 0;
+	HRESULT result = S_FALSE;
+	HRESULT hres = WBEM_S_NO_ERROR;
+	int val = -1;
+	VARIANT v;
+	long lLower = 0;
+	long lUpper = 0;
+	long i = 0;
+	SAFEARRAY *pSafeArray;
+
+	hres = enumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+	if (FAILED(hres) || uReturn == 0) {
+		return -1;
+	}
+
+	result = pclsObj->Get(fieldname, 0, &v, 0, 0);
+	if (FAILED(result)) {
+		pclsObj->Release();
+		return -1;
+	}
+
+	if ((v.vt & VT_ARRAY))
+	{
+		pSafeArray = v.parray;
+		SafeArrayGetLBound(pSafeArray, 1, &lLower);
+		SafeArrayGetUBound(pSafeArray, 1, &lUpper);
+
+		result = SafeArrayGetElement(pSafeArray, &i, &val);
+		if (FAILED(result)) {
+			SafeArrayDestroy(pSafeArray);
+			pclsObj->Release();
+			return -1;
+		}
+	}
+
+	SafeArrayDestroy(pSafeArray);
+	pclsObj->Release();
+
+	return val;
+}
+
 //retrieve string field value
 static int wmiGetStringField(IEnumWbemClassObject *enumerator, char **buf, const wchar_t *fieldname)
 {
@@ -355,24 +401,48 @@ static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldnam
 	if (_locator == NULL || _services == NULL) return -1;
 
 	int size = 0;
-	IEnumWbemClassObject *pEnumerator = NULL;
+	IEnumWbemClassObject *enumerator = NULL;
 	wchar_t *query;
 
 	if ((query = SysAllocString(queryStr)) == NULL) {
 		return -1;
 	}
 
-	if ((pEnumerator = (IEnumWbemClassObject *)wmiExecQuery(query, true)) == NULL) {
+	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(query, true)) == NULL) {
 		Common::SysFreeStr(query);
 		return -1;
 	}
 
-	size = wmiGetStringField(pEnumerator, buf, fieldname);
+	size = wmiGetStringField(enumerator, buf, fieldname);
 
-	pEnumerator->Release();
+	enumerator->Release();
 	Common::SysFreeStr(query);
 
 	return size;
+}
+
+static unsigned short getValue(const wchar_t *queryStr, const wchar_t *fieldname)
+{
+	if (_locator == NULL || _services == NULL) return 2;
+
+	IEnumWbemClassObject *enumerator = NULL;
+	wchar_t *query;
+
+	if ((query = SysAllocString(queryStr)) == NULL) {
+		return 2;
+	}
+
+	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(query, true)) == NULL) {
+		Common::SysFreeStr(query);
+		return 2;
+	}
+
+	unsigned short val = wmiGetUShortFromArrayField(enumerator, fieldname);
+
+	enumerator->Release();
+	Common::SysFreeStr(query);
+
+	return val;
 }
 
 //retrieve motherboard details
@@ -598,7 +668,8 @@ void Core::init(void)
 	}
 
 	//get architecture
-	switch (Architecture()) {
+	switch (Architecture())
+	{
 	case  Arch_x86:
 		Common::PrintDebug("Architecture", 3, "%s", "x86"); printf("Architecture: x86\n"); break;
 	case Arch_x64:
@@ -608,7 +679,8 @@ void Core::init(void)
 	}
 
 	//get os version(windowns)
-	switch (WinVer()) {
+	switch (WinVer())
+	{
 	case  Windows_7:
 		Common::PrintDebug("Windows", 9, "%s", "Windows 7"); printf("Windows: Windows 7\n"); break;
 	case Windows_7SP1:
@@ -639,6 +711,21 @@ void Core::init(void)
 		Common::PrintDebug("Motherboard", motherBoardSize, "%s", motherBoard);
 		printf("Motherboard: %s\n", motherBoard);
 		Common::hFree(motherBoard);
+	}
+
+	//get chassis type
+	switch (getValue(L"SELECT ChassisTypes FROM Win32_SystemEnclosure", L"ChassisTypes"))
+	{
+	case  ChassisType_Other:
+		Common::PrintDebug("Chassis Type", 5, "%s", "Other"); printf("Chassis Type: Other\n"); break;
+	case  ChassisType_Desktop:
+		Common::PrintDebug("Chassis Type", 5, "%s", "Desktop"); printf("Chassis Type: Desktop\n"); break;
+	case  ChassisType_Laptop:
+		Common::PrintDebug("Chassis Type", 5, "%s", "Laptop"); printf("Chassis Type: Laptop\n"); break;
+	case  ChassisType_Notebook:
+		Common::PrintDebug("Chassis Type", 5, "%s", "Notebook"); printf("Chassis Type: Notebook\n"); break;
+	default:
+		Common::PrintDebug("Chassis Type", 7, "%s", "unknown"); printf("Chassis Type: unknown\n"); break;
 	}
 
 	//END of TESTING
