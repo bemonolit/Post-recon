@@ -618,6 +618,26 @@ static unsigned long getUser(char **buf)
 	return size;
 }
 
+//get current username
+static unsigned long getPc(char **buf)
+{
+	unsigned long size = 0;
+	(void)GetComputerNameEx(ComputerNameNetBIOS, NULL, &size);
+
+	if ((*buf = (char*)Common::hAlloc(size * sizeof(char))) == NULL) {
+		return -1;
+	}
+
+	if (GetComputerNameEx(ComputerNameNetBIOS, *buf, &size) == 0) {
+		Common::hFree(*buf);
+		return -1;
+	}
+
+	(*buf)[size] = 0;
+
+	return size;
+}
+
 //initialize core library
 void Core::init(void)
 {
@@ -625,11 +645,13 @@ void Core::init(void)
 	char *gpu = 0;
 	char *motherBoard = 0;
 	char *username = 0;
+	char *pcname = 0;
 
 	int cpuSize = 0;
 	int gpuSize = 0;
 	int motherBoardSize = 0;
 	unsigned long usernameSize = 0;
+	unsigned long pcSize = 0;
 
 	wchar_t *resource;
 
@@ -756,6 +778,13 @@ void Core::init(void)
 		Common::PrintDebug("Username", usernameSize, "%s", username);
 		printf("Username: %s\n", username);
 		Common::hFree(username);
+	}
+
+	//get pcname
+	if ((pcSize = getPc(&pcname)) != -1) {
+		Common::PrintDebug("PC name", pcSize, "%s", pcname);
+		printf("PC name: %s\n", pcname);
+		Common::hFree(pcname);
 	}
 
 	//END of TESTING
