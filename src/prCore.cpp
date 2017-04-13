@@ -28,13 +28,7 @@ For more see the file 'LICENSE' for copying permission.
 #include <security.h>
 #include "prHash.h"
 
-#include <stdio.h>
-
-//static IWbemLocator *_locator = 0;
-//static IWbemServices *_services = 0;
 static CLSID CLSID_WbemLocator2 = { 0x4590F811, 0x1D3A, 0x11D0,{ 0x89, 0x1F, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
-//static bool _wminInitialized = false;
-
 
 // .:: WMI ::.
 
