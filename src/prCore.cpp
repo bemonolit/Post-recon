@@ -27,6 +27,8 @@ For more see the file 'LICENSE' for copying permission.
 #include <VersionHelpers.h>
 #include <stdio.h>
 #include <security.h>
+#include "prHash.h"
+
 
 static IWbemLocator *_locator = 0;
 static IWbemServices *_services = 0;
@@ -710,6 +712,7 @@ void Core::init(void)
 	char *pcname = 0;
 	char *bios = 0;
 	char *mac = 0;
+	char *hash = 0;
 
 	int cpuSize = 0;
 	int gpuSize = 0;
@@ -872,6 +875,12 @@ void Core::init(void)
 		Common::PrintDebug("First MAC address", macSize, "%s", mac);
 		printf("First MAC address: %s\n", mac);
 		Common::hFree(mac);
+	}
+
+	if (LibHash::sha256((unsigned char *)"This is a test.", 15, &hash)) {
+		Common::PrintDebug("Hash", SHA256_HASH_SIZE * 2, "%s", hash);
+		printf("Hash: %s\n", hash);
+		Common::hFree(hash);
 	}
 
 	//END of TESTING

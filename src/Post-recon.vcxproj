@@ -99,7 +99,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\curl\builds\libcurl-vc14-x86-release-static-sspi-winssl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libcurl_a.lib;shlwapi.lib;wbemuuid.lib;secur32.lib;iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libcurl_a.lib;shlwapi.lib;wbemuuid.lib;secur32.lib;iphlpapi.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>MSVCRT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -136,7 +136,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\curl\builds\libcurl-vc14-x86-release-static-sspi-winssl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libcurl_a.lib;shlwapi.lib;wbemuuid.lib;secur32.lib;iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libcurl_a.lib;shlwapi.lib;wbemuuid.lib;secur32.lib;iphlpapi.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -164,6 +164,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="prCommon.cpp" />
     <ClCompile Include="prCore.cpp" />
+    <ClCompile Include="prHash.cpp" />
     <ClCompile Include="prLibCurl.cpp" />
     <ClCompile Include="prMime.cpp" />
     <ClCompile Include="prSystem.cpp" />
@@ -173,6 +174,7 @@
     <ClInclude Include="prCommon.h" />
     <ClInclude Include="prConfig.h" />
     <ClInclude Include="prCore.h" />
+    <ClInclude Include="prHash.h" />
     <ClInclude Include="prLibCurl.h" />
     <ClInclude Include="prMime.h" />
     <ClInclude Include="prSystem.h" />
