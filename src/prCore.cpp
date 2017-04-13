@@ -25,10 +25,10 @@ For more see the file 'LICENSE' for copying permission.
 #include "prCore.h"
 #include <wbemidl.h>
 #include <VersionHelpers.h>
-#include <stdio.h>
 #include <security.h>
 #include "prHash.h"
 
+#include <stdio.h>
 
 //static IWbemLocator *_locator = 0;
 //static IWbemServices *_services = 0;
@@ -95,15 +95,15 @@ static void* wmiExecQuery(IWbemServices *services, wchar_t *query, bool forwardO
 }
 
 //retrieve unisgned short from array
-static int wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const WCHAR *fieldname)
+static unsigned short wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const wchar_t *fieldname)
 {
-	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return -1;
+	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return 0;
 
 	IWbemClassObject *pclsObj = NULL;
-	ULONG uReturn = 0;
+	unsigned long uReturn = 0;
 	HRESULT result = S_FALSE;
 	HRESULT hres = WBEM_S_NO_ERROR;
-	int val = -1;
+	int val = 0;
 	VARIANT v;
 	long lLower = 0;
 	long lUpper = 0;
@@ -112,13 +112,13 @@ static int wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const WC
 
 	hres = enumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
 	if (FAILED(hres) || uReturn == 0) {
-		return -1;
+		return 0;
 	}
 
 	result = pclsObj->Get(fieldname, 0, &v, 0, 0);
 	if (FAILED(result)) {
 		pclsObj->Release();
-		return -1;
+		return 0;
 	}
 
 	if ((v.vt & VT_ARRAY))
@@ -131,7 +131,7 @@ static int wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const WC
 		if (FAILED(result)) {
 			SafeArrayDestroy(pSafeArray);
 			pclsObj->Release();
-			return -1;
+			return 0;
 		}
 	}
 
@@ -142,16 +142,16 @@ static int wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const WC
 }
 
 //retrieve string field value
-static int wmiGetStringField(IEnumWbemClassObject *enumerator, char **buf, const wchar_t *fieldname)
+static unsigned int wmiGetStringField(IEnumWbemClassObject *enumerator, char **buf, const wchar_t *fieldname)
 {
-	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return -1;
+	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return 0;
 
 	IWbemClassObject *pclsObj = NULL;
-	ULONG uReturn = 0;
+	unsigned long uReturn = 0;
 	HRESULT result = S_FALSE;
 	HRESULT hres = WBEM_S_NO_ERROR;
-	int size = -1;
-	int totalSize = 0;
+	unsigned int size = 0;
+	unsigned int totalSize = 0;
 	char *tmp = 0;
 	VARIANT v;
 
@@ -178,14 +178,14 @@ static int wmiGetStringField(IEnumWbemClassObject *enumerator, char **buf, const
 			if ((*buf = (char*)Common::hAlloc(totalSize * sizeof(char))) == NULL) {
 				VariantClear(&v);
 				pclsObj->Release();
-				return -1;
+				return 0;
 			}
 
 			if (Common::CopyString(*buf, totalSize, tmp) != 0) {
 				Common::hFree(*buf);
 				VariantClear(&v);
 				pclsObj->Release();
-				return -1;
+				return 0;
 			}
 
 		}
@@ -196,21 +196,21 @@ static int wmiGetStringField(IEnumWbemClassObject *enumerator, char **buf, const
 				Common::hFree(*buf);
 				VariantClear(&v);
 				pclsObj->Release();
-				return -1;
+				return 0;
 			}
 
 			if (Common::ConcatString(*buf, totalSize, ",") == S_FALSE) {
 				Common::hFree(*buf);
 				VariantClear(&v);
 				pclsObj->Release();
-				return -1;
+				return 0;
 			}
 
 			if (Common::ConcatString(*buf, totalSize, tmp) == S_FALSE) {
 				Common::hFree(*buf);
 				VariantClear(&v);
 				pclsObj->Release();
-				return -1;
+				return 0;
 			}
 		}
 
@@ -285,7 +285,7 @@ static bool IsWindowsVersion(unsigned short wMajorVersion, unsigned short wMinor
 {
 	if (wMajorVersion < 0 || wMinorVersion < 0 || wServicePackMajor < 0) return false;
 
-	DWORDLONG dwlConditionMask = 0;
+	unsigned long long dwlConditionMask = 0;
 	OSVERSIONINFOEX osvi;
 
 	VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
@@ -376,21 +376,21 @@ static int WinVer(void)
 }
 
 //retrieve information
-static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr, const wchar_t *fieldname)
+static unsigned int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr, const wchar_t *fieldname)
 {
-	if (queryStr == NULL || fieldname == NULL) return -1;
+	if (queryStr == NULL || fieldname == NULL) return 0;
 
-	int size = 0;
+	unsigned int size = 0;
 	IEnumWbemClassObject *enumerator = NULL;
 	wchar_t *query;
 
 	if ((query = SysAllocString(queryStr)) == NULL) {
-		return -1;
+		return 0;
 	}
 
 	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(services, query, true)) == NULL) {
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 
 	size = wmiGetStringField(enumerator, buf, fieldname);
@@ -407,6 +407,7 @@ static unsigned short getValue(IWbemServices *services, const wchar_t *queryStr,
 
 	IEnumWbemClassObject *enumerator = NULL;
 	wchar_t *query;
+	unsigned short val = 0;
 
 	if ((query = SysAllocString(queryStr)) == NULL) {
 		return 2;
@@ -417,7 +418,7 @@ static unsigned short getValue(IWbemServices *services, const wchar_t *queryStr,
 		return 2;
 	}
 
-	unsigned short val = wmiGetUShortFromArrayField(enumerator, fieldname);
+	val = wmiGetUShortFromArrayField(enumerator, fieldname);
 
 	enumerator->Release();
 	Common::SysFreeStr(query);
@@ -426,47 +427,47 @@ static unsigned short getValue(IWbemServices *services, const wchar_t *queryStr,
 }
 
 //retrieve motherboard details
-static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr, const wchar_t *fieldname1, const wchar_t *fieldname2, const wchar_t *fieldname3)
+static unsigned long getValue(IWbemServices *services, char **buf, const wchar_t *queryStr, const wchar_t *fieldname1, const wchar_t *fieldname2, const wchar_t *fieldname3)
 {
-	if (queryStr == NULL || fieldname1 == NULL || fieldname2 == NULL || fieldname3 == NULL) return -1;
+	if (queryStr == NULL || fieldname1 == NULL || fieldname2 == NULL || fieldname3 == NULL) return 0;
 
 	IEnumWbemClassObject *enumerator = NULL;
-	int size = 0;
-	int tmp = 0;
+	unsigned long size = 0;
+	unsigned long tmp = 0;
 	wchar_t *query;
 	char *manufacturer = 0;
 	char *product = 0;
 	char *serial = 0;
 
 	if ((query = SysAllocString(queryStr)) == NULL) {
-		return -1;
+		return 0;
 	}
 
 	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(services, query, false)) == NULL) {
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 
-	if ((tmp = wmiGetStringField(enumerator, &manufacturer, fieldname1)) == -1) {
+	if ((tmp = wmiGetStringField(enumerator, &manufacturer, fieldname1)) == 0) {
 		Common::hFree(manufacturer);
 		enumerator->Release();
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 	size += tmp;
 	if (enumerator->Reset() != WBEM_S_NO_ERROR) {
 		Common::hFree(manufacturer);
 		enumerator->Release();
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 
-	if ((tmp = wmiGetStringField(enumerator, &product, fieldname2)) == -1) {
+	if ((tmp = wmiGetStringField(enumerator, &product, fieldname2)) == 0) {
 		Common::hFree(manufacturer);
 		Common::hFree(product);
 		enumerator->Release();
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 	size += tmp;
 	if (enumerator->Reset() != WBEM_S_NO_ERROR) {
@@ -474,15 +475,16 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(product);
 		enumerator->Release();
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 
-	if ((tmp = wmiGetStringField(enumerator, &serial, fieldname3)) == -1) {
+	if ((tmp = wmiGetStringField(enumerator, &serial, fieldname3)) == 0) {
 		Common::hFree(manufacturer);
 		Common::hFree(product);
 		Common::hFree(serial);
 		enumerator->Release();
 		Common::SysFreeStr(query);
+		return 0;
 	}
 	size += tmp + 3;	//2 spaces and a null character
 
@@ -492,7 +494,7 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(serial);
 		enumerator->Release();
 		Common::SysFreeStr(query);
-		return -1;
+		return 0;
 	}
 
 	if (Common::ConcatString(*buf, size, manufacturer) == S_FALSE) {
@@ -502,7 +504,7 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(serial);
 		Common::SysFreeStr(query);
 		enumerator->Release();
-		return -1;
+		return 0;
 	}
 
 	if (Common::ConcatString(*buf, size, " ") == S_FALSE) {
@@ -512,7 +514,7 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(serial);
 		Common::SysFreeStr(query);
 		enumerator->Release();
-		return -1;
+		return 0;
 	}
 
 	if (Common::ConcatString(*buf, size, product) == S_FALSE) {
@@ -522,7 +524,7 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(serial);
 		Common::SysFreeStr(query);
 		enumerator->Release();
-		return -1;
+		return 0;
 	}
 
 	if (Common::ConcatString(*buf, size, " ") == S_FALSE) {
@@ -532,7 +534,7 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(serial);
 		Common::SysFreeStr(query);
 		enumerator->Release();
-		return -1;
+		return 0;
 	}
 
 	if (Common::ConcatString(*buf, size, serial) == S_FALSE) {
@@ -542,7 +544,7 @@ static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr
 		Common::hFree(serial);
 		Common::SysFreeStr(query);
 		enumerator->Release();
-		return -1;
+		return 0;
 	}
 
 	Common::hFree(manufacturer);
@@ -584,12 +586,12 @@ static unsigned long getUser(char **buf)
 	(void)GetUserNameEx(NameSamCompatible, NULL, &size);
 
 	if ((*buf = (char*)Common::hAlloc(size * sizeof(char))) == NULL) {
-		return -1;
+		return 0;
 	}
 
 	if (GetUserNameEx(NameSamCompatible, *buf, &size) == 0) {
 		Common::hFree(*buf);
-		return -1;
+		return 0;
 	}
 
 	(*buf)[size] = 0;
@@ -604,12 +606,12 @@ static unsigned long getPc(char **buf)
 	(void)GetComputerNameEx(ComputerNameNetBIOS, NULL, &size);
 
 	if ((*buf = (char*)Common::hAlloc(size * sizeof(char))) == NULL) {
-		return -1;
+		return 0;
 	}
 
 	if (GetComputerNameEx(ComputerNameNetBIOS, *buf, &size) == 0) {
 		Common::hFree(*buf);
-		return -1;
+		return 0;
 	}
 
 	(*buf)[size] = 0;
@@ -631,25 +633,25 @@ static unsigned long getRam(void)
 }
 
 //get first physical address
-static int getFirstMacAddress(char **buf)
+static unsigned long getFirstMacAddress(char **buf)
 {
 	unsigned long size = 0;
-	int macSize = 17;
+	unsigned long macSize = 17;
 	PIP_ADAPTER_ADDRESSES pAddresses;
 
 	(void)GetAdaptersAddresses(0, 0, 0, 0, &size);
 
 	if (!size) {
-		return -1;
+		return 0;
 	}
 
 	if ((pAddresses = (IP_ADAPTER_ADDRESSES*)Common::hAlloc(size)) == NULL) {
-		return -1;
+		return 0;
 	}
 
 	if (GetAdaptersAddresses(0, 0, 0, pAddresses, &size) != NO_ERROR) {
 		Common::hFree(pAddresses);
-		return -1;
+		return 0;
 	}
 
 	while (pAddresses)
@@ -659,17 +661,17 @@ static int getFirstMacAddress(char **buf)
 
 		if ((*buf = (char*)Common::hAlloc((macSize + 1) * sizeof(char))) == NULL) {
 			Common::hFree(pAddresses);
-			return -1;
+			return 0;
 		}
 
 		if (Common::FormatString(*buf, macSize + 1, "%02X-%02X-%02X-%02X-%02X-%02X",
 			pAddresses->PhysicalAddress[0], pAddresses->PhysicalAddress[1],
 			pAddresses->PhysicalAddress[2], pAddresses->PhysicalAddress[3],
-			pAddresses->PhysicalAddress[4], pAddresses->PhysicalAddress[5]) == -1)
+			pAddresses->PhysicalAddress[4], pAddresses->PhysicalAddress[5]) == 0)
 		{
 			Common::hFree(*buf);
 			Common::hFree(pAddresses);
-			return -1;
+			return 0;
 		}
 
 		break;
@@ -685,6 +687,7 @@ HRESULT Core::UniqueID(char **id)
 {
 	IWbemLocator *_locator = 0;
 	IWbemServices *_services = 0;
+	HRESULT result = S_FALSE;
 
 	char *cpu = 0;
 	char *gpu = 0;
@@ -693,17 +696,16 @@ HRESULT Core::UniqueID(char **id)
 	char *pcname = 0;
 	char *bios = 0;
 	char *mac = 0;
-	char *hash = 0;
+	char *output = 0;
 
-	int cpuSize = 0;
-	int gpuSize = 0;
-	int motherBoardSize = 0;
-	int biosSize = 0;
-	int macSize = 0;
+	unsigned long tmp = 0;
+	unsigned long ram = 0;
+	unsigned long totalSize = 0;
 
-	unsigned long usernameSize = 0;
-	unsigned long pcSize = 0;
-	unsigned long totalRam = 0;
+	unsigned int architecture = 0;
+	unsigned int winOS = 0;
+	unsigned int isadmin = 0;
+	unsigned int chassisType = 0;
 
 	wchar_t *resource;
 
@@ -714,6 +716,7 @@ HRESULT Core::UniqueID(char **id)
 
 	//create wmi
 	if ((_locator = (IWbemLocator *)wmiCreate()) == NULL) {
+		CoUninitialize();
 		return S_FALSE;
 	}
 
@@ -749,6 +752,7 @@ HRESULT Core::UniqueID(char **id)
 	if ((resource = SysAllocString(L"ROOT\\cimv2")) == NULL) {
 		_locator->Release();
 		_locator = NULL;
+		CoUninitialize();
 		return S_FALSE;
 	}
 
@@ -757,124 +761,93 @@ HRESULT Core::UniqueID(char **id)
 		Common::SysFreeStr(resource);
 		_locator->Release();
 		_locator = NULL;
+		CoUninitialize();
 		return S_FALSE;
 	}
 
-
-	///////////////////////////////////////
-	//TESTING
-
 	//get cpu
-	if ((cpuSize = getValue(_services, &cpu, L"SELECT * FROM Win32_Processor", L"Name")) != -1) {
-		Common::PrintDebug("CPU", cpuSize, "%s", cpu);
-		printf("CPU: %s\n", cpu);
-		Common::hFree(cpu);
+	if ((tmp = getValue(_services, &cpu, L"SELECT * FROM Win32_Processor", L"Name")) > 0) {
+		totalSize += tmp;
 	}
 
 	//get architecture
-	switch (Architecture())
-	{
-	case  Arch_x86:
-		Common::PrintDebug("Architecture", 3, "%s", "x86"); printf("Architecture: x86\n"); break;
-	case Arch_x64:
-		Common::PrintDebug("Architecture", 3, "%s", "x64"); printf("Architecture: x64\n"); break;
-	default:
-		Common::PrintDebug("Architecture", 7, "%s", "unknown"); printf("Architecture: unknown\n"); break;
-	}
+	architecture = Architecture();
+	totalSize += Common::NumOfDigits(architecture);
 
 	//get os version(windowns)
-	switch (WinVer())
-	{
-	case  Windows_7:
-		Common::PrintDebug("Windows", 9, "%s", "Windows 7"); printf("Windows: Windows 7\n"); break;
-	case Windows_7SP1:
-		Common::PrintDebug("Windows", 13, "%s", "Windows 7 SP1"); printf("Windows 7 SP1\n"); break;
-	case Windows_8:
-		Common::PrintDebug("Windows", 10, "%s", "Windows 8"); printf("Windows: Windows 8\n"); break;
-	case Windows_81:
-		Common::PrintDebug("Windows", 11, "%s", "Windows 8.1"); printf("Windows: Windows 8.1\n"); break;
-	case Windows_10:
-		Common::PrintDebug("Windows", 10, "%s", "Windows 10"); printf("Windows: Windows 10\n"); break;
-	default:
-		Common::PrintDebug("Windows", 7, "%s", "unknown"); printf("Windows: unknown\n"); break;
-	}
+	winOS = WinVer();
+	totalSize += Common::NumOfDigits(winOS);
 
 	//get gpu
-	if ((gpuSize = getValue(_services, &gpu, L"SELECT Caption FROM Win32_VideoController", L"Caption")) != -1) {
-		Common::PrintDebug("GPU", gpuSize, "%s", gpu);
-		printf("GPU: %s\n", gpu);
-		Common::hFree(gpu);
+	if ((tmp = getValue(_services, &gpu, L"SELECT Caption FROM Win32_VideoController", L"Caption")) > 0) {
+		totalSize += tmp;
 	}
 
 	//is admin?
-	printf("Is Admin? %s\n", (isAdmin() ? "yes" : "no"));
-	Common::PrintDebug("Is Admin?", 3, "%s", (isAdmin() ? "yes" : "no"));
+	isadmin = isAdmin() ? 2 : 1;
+	totalSize += Common::NumOfDigits(isadmin);
 
 	//get motherBoard
-	if ((motherBoardSize = getValue(_services, &motherBoard, L"Select * from Win32_BaseBoard", L"Manufacturer", L"Product", L"SerialNumber")) != -1) {
-		Common::PrintDebug("Motherboard", motherBoardSize, "%s", motherBoard);
-		printf("Motherboard: %s\n", motherBoard);
-		Common::hFree(motherBoard);
+	if ((tmp = getValue(_services, &motherBoard, L"Select * from Win32_BaseBoard", L"Manufacturer", L"Product", L"SerialNumber")) > 0) {
+		totalSize += tmp;
 	}
 
 	//get chassis type
-	switch (getValue(_services, L"SELECT ChassisTypes FROM Win32_SystemEnclosure", L"ChassisTypes"))
-	{
-	case  ChassisType_Other:
-		Common::PrintDebug("Chassis Type", 5, "%s", "Other"); printf("Chassis Type: Other\n"); break;
-	case  ChassisType_Desktop:
-		Common::PrintDebug("Chassis Type", 5, "%s", "Desktop"); printf("Chassis Type: Desktop\n"); break;
-	case  ChassisType_Laptop:
-		Common::PrintDebug("Chassis Type", 5, "%s", "Laptop"); printf("Chassis Type: Laptop\n"); break;
-	case  ChassisType_Notebook:
-		Common::PrintDebug("Chassis Type", 5, "%s", "Notebook"); printf("Chassis Type: Notebook\n"); break;
-	default:
-		Common::PrintDebug("Chassis Type", 7, "%s", "unknown"); printf("Chassis Type: unknown\n"); break;
-	}
+	chassisType = getValue(_services, L"SELECT ChassisTypes FROM Win32_SystemEnclosure", L"ChassisTypes");
+	totalSize += Common::NumOfDigits(chassisType);
 
 	//get username
-	if ((usernameSize = getUser(&username)) != -1) {
-		Common::PrintDebug("Username", usernameSize, "%s", username);
-		printf("Username: %s\n", username);
-		Common::hFree(username);
+	if ((tmp = getUser(&username)) > 0) {
+		totalSize += tmp;
 	}
 
 	//get pcname
-	if ((pcSize = getPc(&pcname)) != -1) {
-		Common::PrintDebug("PC name", pcSize, "%s", pcname);
-		printf("PC name: %s\n", pcname);
-		Common::hFree(pcname);
+	if ((tmp = getPc(&pcname)) > 0) {
+		totalSize += tmp;
 	}
 
 	//get ram
-	totalRam = getRam();
-	Common::PrintDebug("RAM", pcSize, "%lu MB", totalRam);
-	printf("RAM: %lu MB\n", totalRam);
-	printf("length: %d\n", Common::NumOfDigits(totalRam));
+	ram = getRam();
+	totalSize += Common::NumOfDigits(ram);
 
 	//get bios
-	if ((biosSize = getValue(_services, &bios, L"Select * from Win32_BIOS", L"Caption", L"Manufacturer", L"SerialNumber")) != -1) {
-		Common::PrintDebug("Bios", biosSize, "%s", bios);
-		printf("Bios: %s\n", bios);
-		Common::hFree(bios);
+	if ((tmp = getValue(_services, &bios, L"Select * from Win32_BIOS", L"Caption", L"Manufacturer", L"SerialNumber")) > 0) {
+		totalSize += tmp;
 	}
 
 	//get first mac address
-	if ((macSize = getFirstMacAddress(&mac)) != -1) {
-		Common::PrintDebug("First MAC address", macSize, "%s", mac);
-		printf("First MAC address: %s\n", mac);
-		Common::hFree(mac);
+	if ((tmp = getFirstMacAddress(&mac)) > 0) {
+		totalSize += tmp;
 	}
 
-	//calc sha-2 hash
-	if (LibHash::sha256((unsigned char *)"This is a test.", 15, &hash)) {
-		Common::PrintDebug("Hash", SHA256_HASH_SIZE * 2, "%s", hash);
-		printf("Hash: %s\n", hash);
-		Common::hFree(hash);
+	totalSize += 1;
+
+	if (cpu && gpu && motherBoard && username && pcname && bios && mac)
+	{
+
+		if ((output = (char*)Common::hAlloc(totalSize * sizeof(char))) != NULL)
+		{
+
+			//arch+winver+cpu+gpu+isadmin+motherboard+chassistype+username+pcname+ram+bios+mac
+			if (Common::FormatString(output, totalSize, "%u%u%s%s%u%s%u%s%s%lu%s%s",
+				architecture, winOS, cpu, gpu, isadmin, motherBoard, chassisType, username, pcname, ram, bios, mac) != -1)
+			{
+
+				//calc sha-2 hash
+				result = LibHash::sha256((unsigned char *)output, totalSize - 1, id) ? S_OK : S_FALSE;
+			}
+		}
+		Common::hFree(output);
 	}
 
-	//END of TESTING
-	///////////////////////////////////////
+	Common::hFree(cpu);
+	Common::hFree(gpu);
+	Common::hFree(motherBoard);
+	Common::hFree(username);
+	Common::hFree(pcname);
+	Common::hFree(bios);
+	Common::hFree(mac);
+
 
 	Common::SysFreeStr(resource);
 	_services->Release();
@@ -883,5 +856,5 @@ HRESULT Core::UniqueID(char **id)
 	_locator = NULL;
 	CoUninitialize();
 
-	return S_OK;
+	return result;
 }

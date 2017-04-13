@@ -30,7 +30,7 @@ For more see the file 'LICENSE' for copying permission.
 #include <math.h>
 
 //format string
-static int _FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList)
+static int _FormatString(char *destination, const unsigned int sizeInBytes, const char* format, va_list argList)
 {
 	if (destination == NULL || sizeInBytes <= 0 || format == NULL) return -1;
 
@@ -43,7 +43,7 @@ static int _FormatString(char *destination, const size_t sizeInBytes, const char
 
 //HeapAlloc wrapper
 //allocate a block of memory from a heap
-void* Common::hAlloc(SIZE_T size)
+void* Common::hAlloc(unsigned long size)
 {
 	if (size <= 0) return NULL;
 
@@ -54,7 +54,7 @@ void* Common::hAlloc(SIZE_T size)
 }
 
 //HeapReAlloc wrapper
-void* Common::hReAlloc(void *mem, SIZE_T size)
+void* Common::hReAlloc(void *mem, unsigned long size)
 {
 	if (mem == NULL || size <= 0) return NULL;
 
@@ -78,7 +78,7 @@ void Common::hFree(void *mem)
 
 //SecureZeroMemory wrapper
 //Fills a block of memory with zeros. 
-void Common::hZero(void *mem, SIZE_T size)
+void Common::hZero(void *mem, unsigned long size)
 {
 	if (size <= 0)return;
 
@@ -97,7 +97,7 @@ void Common::SysFreeStr(wchar_t *str)
 }
 
 //wmemmove_s wrapper
-int Common::MemMoveW(wchar_t *destination, size_t numElements, const wchar_t *source, size_t count)
+int Common::MemMoveW(wchar_t *destination, unsigned int numElements, const wchar_t *source, unsigned int count)
 {
 	if (destination == NULL || numElements <= 0 || source == NULL || count <= 0) return EINVAL;
 
@@ -105,7 +105,7 @@ int Common::MemMoveW(wchar_t *destination, size_t numElements, const wchar_t *so
 }
 
 //convert wide char to ascii char
-char* Common::WcharToChar(const WCHAR *src, int slen)
+char* Common::WcharToChar(const wchar_t *src, int slen)
 {
 	if (src == NULL || slen <= 0)return NULL;
 
@@ -168,7 +168,7 @@ char* Common::GetTimezoneOffset(void)
 }
 
 //copy string
-int Common::CopyString(char *destination, size_t sizeInBytes, const char *source)
+int Common::CopyString(char *destination, unsigned int sizeInBytes, const char *source)
 {
 	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return EINVAL;
 
@@ -176,7 +176,7 @@ int Common::CopyString(char *destination, size_t sizeInBytes, const char *source
 }
 
 //copy string
-int Common::CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max)
+int Common::CopyString(char *destination, unsigned int sizeInBytes, const char *source, unsigned int max)
 {
 	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return EINVAL;
 
@@ -187,7 +187,7 @@ int Common::CopyString(char *destination, size_t sizeInBytes, const char *source
 }
 
 //concat strings
-HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *source)
+HRESULT Common::ConcatString(char *destination, unsigned int sizeInBytes, const char *source)
 {
 	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return S_FALSE;
 
@@ -195,7 +195,7 @@ HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *
 }
 
 //concat strings
-HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *source, size_t max)
+HRESULT Common::ConcatString(char *destination, unsigned int sizeInBytes, const char *source, unsigned int max)
 {
 	if (destination == NULL || sizeInBytes <= 0 || source == NULL) return S_FALSE;
 
@@ -206,7 +206,7 @@ HRESULT Common::ConcatString(char *destination, size_t sizeInBytes, const char *
 }
 
 //format string
-int Common::FormatString(char *destination, const size_t sizeInBytes, const char* format, ...)
+int Common::FormatString(char *destination, const unsigned int sizeInBytes, const char* format, ...)
 {
 	if (destination == NULL || sizeInBytes <= 0 || format == NULL) return -1;
 
@@ -294,7 +294,7 @@ unsigned long Common::Base64Encode(const unsigned char *data, unsigned long size
 }
 
 //split a string
-char **Common::SplitString(int *count, const char *str, SIZE_T size, const char *delim)
+char **Common::SplitString(int *count, const char *str, unsigned long size, const char *delim)
 {
 	char **data = { 0 };
 	char *token = 0;
@@ -365,7 +365,7 @@ char **Common::SplitString(int *count, const char *str, SIZE_T size, const char 
 	return data;
 }
 
-void Common::PrintDebug(char *title, SIZE_T size, const char* format, ...)
+void Common::PrintDebug(char *title, unsigned long size, const char* format, ...)
 {
 #ifdef DEBUG
 	char *str = 0;
@@ -393,7 +393,7 @@ void Common::PrintDebug(char *title, SIZE_T size, const char* format, ...)
 #endif // DEBUG
 }
 
-int Common::NumOfDigits(unsigned long number)
+unsigned int Common::NumOfDigits(unsigned long number)
 {
 	if (number == 0)return -1;
 

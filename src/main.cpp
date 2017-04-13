@@ -25,6 +25,8 @@ For more see the file 'LICENSE' for copying permission.
 #include "prLibCurl.h"
 #include "prCore.h"
 
+#include <stdio.h>
+
 #define TO "xxxxx@gmail.com"
 #define PASSWORD2 "xxxxxxxx"
 #define ToNAME "xxxxxx"
@@ -43,7 +45,7 @@ int main(void)
 	//int emails = 0;
 
 	//TESTING
-	
+
 	//send text email
 	//LibCurl::SendEmail(FROM, FromNAME, TO, ToNAME, subject, body, PASSWORD, FALSE, "", "", "libcurl-agent/1.0", 1L);
 
@@ -61,7 +63,10 @@ int main(void)
 
 
 	//TESTING
-	Core::UniqueID(&id);
+	if (Core::UniqueID(&id) == S_OK) {
+		printf("Computer Unique ID: %s\n", id);
+	}
+	Common::hFree(id);
 	//END of TESTING
 
 	return EXIT_SUCCESS;

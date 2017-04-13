@@ -30,10 +30,10 @@ For more see the file 'LICENSE' for copying permission.
 namespace Common
 {
 	//Allocates a block of memory from a heap.
-	void* hAlloc(SIZE_T size);
+	void* hAlloc(unsigned long size);
 
 	//Reallocates a block of memory from a heap.
-	void* hReAlloc(void *mem, SIZE_T size);
+	void* hReAlloc(void *mem, unsigned long size);
 
 	//free a memory block allocated from a heap by the hAlloc
 	void hFree(void *mem);
@@ -41,30 +41,30 @@ namespace Common
 	void SysFreeStr(wchar_t *str);
 
 	//zero a memory block
-	void hZero(void *mem, SIZE_T size);
+	void hZero(void *mem, unsigned long size);
 
 	//convert wchar* to char*
-	char* WcharToChar(const WCHAR *src, int slen);
+	char* WcharToChar(const wchar_t *src, int slen);
 
-	int MemMoveW(wchar_t *destination, size_t numElements, const wchar_t *source, size_t count);
+	int MemMoveW(wchar_t *destination, unsigned int numElements, const wchar_t *source, unsigned int count);
 
 	//get date, time and timezone offset
 	char *GetTimezoneOffset(void);
 
 	//copies characters of one string to another
-	int CopyString(char *destination, size_t sizeInBytes, const char *source);
+	int CopyString(char *destination, unsigned int sizeInBytes, const char *source);
 
 	//concat strings
-	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source);
+	HRESULT ConcatString(char *destination, unsigned int sizeInBytes, const char *source);
 
 	//copies characters of one string to another
-	int CopyString(char *destination, size_t sizeInBytes, const char *source, size_t max);
+	int CopyString(char *destination, unsigned int sizeInBytes, const char *source, unsigned int max);
 
 	//concat strings
-	HRESULT ConcatString(char *destination, size_t sizeInBytes, const char *source, size_t max);
+	HRESULT ConcatString(char *destination, unsigned int sizeInBytes, const char *source, unsigned int max);
 
 	//Writes formatted data to a string
-	int FormatString(char *destination, const size_t sizeInBytes, const char* format, ...);
+	int FormatString(char *destination, const unsigned int sizeInBytes, const char* format, ...);
 
 	//load file into memory
 	unsigned long LoadFileIntoMemory(const char *filename, unsigned char **data);
@@ -73,11 +73,11 @@ namespace Common
 	unsigned long Base64Encode(const unsigned char *data, unsigned long size, char **str);
 
 	//split string
-	char **SplitString(int *count, const char *str, SIZE_T size, const char *delim);
+	char **SplitString(int *count, const char *str, unsigned long size, const char *delim);
 
 	//print string to vs debug output
-	void PrintDebug(char *title, SIZE_T size, const char* format, ...);
+	void PrintDebug(char *title, unsigned long size, const char* format, ...);
 
 	//find the length of unsigned long number
-	int NumOfDigits(unsigned long number);
+	unsigned int NumOfDigits(unsigned long number);
 }
