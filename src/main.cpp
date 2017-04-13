@@ -35,6 +35,7 @@ For more see the file 'LICENSE' for copying permission.
 
 int main(void)
 {
+	char *id = 0;
 	/*char subject[50] = "Hello there Hello there";
 	char body[100] = "Test test test\r\ntest new line\r\nnew 1 2 3 4 test test\r\ntest";*/
 	//int *ids;
@@ -60,8 +61,7 @@ int main(void)
 
 
 	//TESTING
-	Core::init();
-	Core::uninit();
+	Core::UniqueID(&id);
 	//END of TESTING
 
 	return EXIT_SUCCESS;

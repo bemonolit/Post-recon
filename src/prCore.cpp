@@ -30,10 +30,10 @@ For more see the file 'LICENSE' for copying permission.
 #include "prHash.h"
 
 
-static IWbemLocator *_locator = 0;
-static IWbemServices *_services = 0;
+//static IWbemLocator *_locator = 0;
+//static IWbemServices *_services = 0;
 static CLSID CLSID_WbemLocator2 = { 0x4590F811, 0x1D3A, 0x11D0,{ 0x89, 0x1F, 0, 0xAA, 0, 0x4B, 0x2E, 0x24 } };
-static bool _wminInitialized = false;
+//static bool _wminInitialized = false;
 
 
 // .:: WMI ::.
@@ -42,36 +42,29 @@ static bool _wminInitialized = false;
 static bool wmiInitialize(void)
 {
 	HRESULT result = S_FALSE;
-	bool _init_success = false, _initsec_success = false;
 
 	result = CoInitializeEx(0, COINIT_MULTITHREADED);
 	if (FAILED(result)) {
 		return false;
 	}
 
-	_init_success = (result == S_OK || result == S_FALSE || result == RPC_E_CHANGED_MODE);
-
 	result = CoInitializeSecurity(
 		NULL, -1, NULL, NULL,
 		RPC_C_AUTHN_LEVEL_DEFAULT,
 		RPC_C_IMP_LEVEL_IMPERSONATE,
-		NULL, EOAC_NONE, NULL
-	);
+		NULL, EOAC_NONE, NULL);
 
 	if (FAILED(result)) {
 		return false;
 	}
 
-	_initsec_success = (result == S_OK || result == RPC_E_TOO_LATE);
-	_wminInitialized = true;
-
-	return (_init_success && _initsec_success);
+	return true;
 }
 
 //execute wmi query
-static void* wmiExecQuery(wchar_t *query, bool forwardOnly)
+static void* wmiExecQuery(IWbemServices *services, wchar_t *query, bool forwardOnly)
 {
-	if (_services == NULL || query == NULL || SysStringLen(query) == 0) return NULL;
+	if (services == NULL || query == NULL || SysStringLen(query) == 0) return NULL;
 
 	HRESULT result = S_FALSE;
 	IEnumWbemClassObject *pEnumerator = NULL;
@@ -81,7 +74,7 @@ static void* wmiExecQuery(wchar_t *query, bool forwardOnly)
 		return NULL;
 	}
 
-	result = _services->ExecQuery(
+	result = services->ExecQuery(
 		language,
 		query,
 		forwardOnly ? (WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY) : WBEM_FLAG_RETURN_IMMEDIATELY,
@@ -101,6 +94,7 @@ static void* wmiExecQuery(wchar_t *query, bool forwardOnly)
 	return pEnumerator;
 }
 
+//retrieve unisgned short from array
 static int wmiGetUShortFromArrayField(IEnumWbemClassObject *enumerator, const WCHAR *fieldname)
 {
 	if (enumerator == NULL || fieldname == NULL || wcslen(fieldname) == 0) return -1;
@@ -250,50 +244,34 @@ static void* wmiCreate(void)
 }
 
 //connect to wmi services
-static void* wmiConnect(wchar_t *resource)
+static void* wmiConnect(IWbemLocator *locator, wchar_t *resource)
 {
-	if (_locator == NULL || resource == NULL || SysStringLen(resource) == 0) return NULL;
+	if (locator == NULL || resource == NULL || SysStringLen(resource) == 0) return NULL;
 
 	HRESULT result = S_FALSE;
 	IWbemServices *services = NULL;
-	bool _connect_success = false, _setproxy_success = false;
 
-	result = _locator->ConnectServer(
-		resource,
-		NULL,
-		NULL,
-		NULL,
-		0,
-		NULL,
-		NULL,
-		&services
+	result = locator->ConnectServer(
+		resource, NULL,
+		NULL, NULL,
+		0, NULL,
+		NULL, &services
 	);
 
 	if (FAILED(result)) {
 		return NULL;
 	}
 
-	_connect_success = (result == WBEM_S_NO_ERROR);
-
 	result = CoSetProxyBlanket(
 		(IUnknown *)services,
-		RPC_C_AUTHN_WINNT,
-		RPC_C_AUTHZ_NONE,
-		NULL,
-		RPC_C_AUTHN_LEVEL_CALL,
-		RPC_C_IMP_LEVEL_IMPERSONATE,
-		NULL,
+		RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE,
+		NULL, RPC_C_AUTHN_LEVEL_CALL,
+		RPC_C_IMP_LEVEL_IMPERSONATE, NULL,
 		EOAC_NONE
 	);
 
 	if (FAILED(result)) {
 		services->Release();
-		return NULL;
-	}
-
-	_setproxy_success = (result == S_OK);
-
-	if (!_connect_success || !_setproxy_success) {
 		return NULL;
 	}
 
@@ -398,9 +376,9 @@ static int WinVer(void)
 }
 
 //retrieve information
-static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldname)
+static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr, const wchar_t *fieldname)
 {
-	if (_locator == NULL || _services == NULL) return -1;
+	if (queryStr == NULL || fieldname == NULL) return -1;
 
 	int size = 0;
 	IEnumWbemClassObject *enumerator = NULL;
@@ -410,7 +388,7 @@ static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldnam
 		return -1;
 	}
 
-	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(query, true)) == NULL) {
+	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(services, query, true)) == NULL) {
 		Common::SysFreeStr(query);
 		return -1;
 	}
@@ -423,9 +401,9 @@ static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldnam
 	return size;
 }
 
-static unsigned short getValue(const wchar_t *queryStr, const wchar_t *fieldname)
+static unsigned short getValue(IWbemServices *services, const wchar_t *queryStr, const wchar_t *fieldname)
 {
-	if (_locator == NULL || _services == NULL) return 2;
+	if (queryStr == NULL || fieldname == NULL) return 2;
 
 	IEnumWbemClassObject *enumerator = NULL;
 	wchar_t *query;
@@ -434,7 +412,7 @@ static unsigned short getValue(const wchar_t *queryStr, const wchar_t *fieldname
 		return 2;
 	}
 
-	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(query, true)) == NULL) {
+	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(services, query, true)) == NULL) {
 		Common::SysFreeStr(query);
 		return 2;
 	}
@@ -448,9 +426,9 @@ static unsigned short getValue(const wchar_t *queryStr, const wchar_t *fieldname
 }
 
 //retrieve motherboard details
-static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldname1, const wchar_t *fieldname2, const wchar_t *fieldname3)
+static int getValue(IWbemServices *services, char **buf, const wchar_t *queryStr, const wchar_t *fieldname1, const wchar_t *fieldname2, const wchar_t *fieldname3)
 {
-	if (_locator == NULL || _services == NULL) return -1;
+	if (queryStr == NULL || fieldname1 == NULL || fieldname2 == NULL || fieldname3 == NULL) return -1;
 
 	IEnumWbemClassObject *enumerator = NULL;
 	int size = 0;
@@ -464,7 +442,7 @@ static int getValue(char **buf, const wchar_t *queryStr, const wchar_t *fieldnam
 		return -1;
 	}
 
-	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(query, false)) == NULL) {
+	if ((enumerator = (IEnumWbemClassObject *)wmiExecQuery(services, query, false)) == NULL) {
 		Common::SysFreeStr(query);
 		return -1;
 	}
@@ -703,8 +681,11 @@ static int getFirstMacAddress(char **buf)
 }
 
 //initialize core library
-void Core::init(void)
+HRESULT Core::UniqueID(char **id)
 {
+	IWbemLocator *_locator = 0;
+	IWbemServices *_services = 0;
+
 	char *cpu = 0;
 	char *gpu = 0;
 	char *motherBoard = 0;
@@ -728,56 +709,63 @@ void Core::init(void)
 
 	//init wmi
 	if (!wmiInitialize()) {
-		return;
+		return S_FALSE;
 	}
 
 	//create wmi
 	if ((_locator = (IWbemLocator *)wmiCreate()) == NULL) {
-		return;
+		return S_FALSE;
 	}
 
-	if (IsWindowsVistaOrGreater()) {
-		resource = SysAllocString(L"ROOT\\SecurityCenter2");
-	}
-	else {
-		resource = SysAllocString(L"ROOT\\SecurityCenter");
-	}
+	// **** ROOT\\SecurityCenter ****
 
-	if (resource == NULL) {
-		_locator->Release();
-		_locator = NULL;
-		return;
-	}
+	//if (IsWindowsVistaOrGreater()) {
+	//	resource = SysAllocString(L"ROOT\\SecurityCenter2");
+	//}
+	//else {
+	//	resource = SysAllocString(L"ROOT\\SecurityCenter");
+	//}
 
-	//connect to wmi
-	if ((_services = (IWbemServices *)wmiConnect(resource)) == NULL) {
-		_locator->Release();
-		_locator = NULL;
-		Common::SysFreeStr(resource);
-		return;
-	}
+	//if (resource == NULL) {
+	//	_locator->Release();
+	//	_locator = NULL;
+	//	return;
+	//}
 
-	_services->Release();
-	Common::SysFreeStr(resource);
+	////connect to wmi
+	//if ((_services = (IWbemServices *)wmiConnect(_locator, resource)) == NULL) {
+	//	_locator->Release();
+	//	_locator = NULL;
+	//	Common::SysFreeStr(resource);
+	//	return;
+	//}
+
+	//_services->Release();
+	//_services = NULL;
+	//Common::SysFreeStr(resource);
+
+	// **** ROOT\\cimv2 ****
 
 	if ((resource = SysAllocString(L"ROOT\\cimv2")) == NULL) {
 		_locator->Release();
 		_locator = NULL;
-		return;
+		return S_FALSE;
 	}
 
-	if ((_services = (IWbemServices *)wmiConnect(resource)) == NULL) {
+	//connect to wmi
+	if ((_services = (IWbemServices *)wmiConnect(_locator, resource)) == NULL) {
+		Common::SysFreeStr(resource);
 		_locator->Release();
 		_locator = NULL;
-		Common::SysFreeStr(resource);
+		return S_FALSE;
 	}
+
 
 	///////////////////////////////////////
 	//TESTING
-	printf("TESTING\n");
 
 	//get cpu
-	if ((cpuSize = getValue(&cpu, L"SELECT * FROM Win32_Processor", L"Name")) != -1) {
+	if ((cpuSize = getValue(_services, &cpu, L"SELECT * FROM Win32_Processor", L"Name")) != -1) {
 		Common::PrintDebug("CPU", cpuSize, "%s", cpu);
 		printf("CPU: %s\n", cpu);
 		Common::hFree(cpu);
@@ -811,8 +799,8 @@ void Core::init(void)
 		Common::PrintDebug("Windows", 7, "%s", "unknown"); printf("Windows: unknown\n"); break;
 	}
 
-	//get cpu
-	if ((gpuSize = getValue(&gpu, L"SELECT Caption FROM Win32_VideoController", L"Caption")) != -1) {
+	//get gpu
+	if ((gpuSize = getValue(_services, &gpu, L"SELECT Caption FROM Win32_VideoController", L"Caption")) != -1) {
 		Common::PrintDebug("GPU", gpuSize, "%s", gpu);
 		printf("GPU: %s\n", gpu);
 		Common::hFree(gpu);
@@ -823,14 +811,14 @@ void Core::init(void)
 	Common::PrintDebug("Is Admin?", 3, "%s", (isAdmin() ? "yes" : "no"));
 
 	//get motherBoard
-	if ((motherBoardSize = getValue(&motherBoard, L"Select * from Win32_BaseBoard", L"Manufacturer", L"Product", L"SerialNumber")) != -1) {
+	if ((motherBoardSize = getValue(_services, &motherBoard, L"Select * from Win32_BaseBoard", L"Manufacturer", L"Product", L"SerialNumber")) != -1) {
 		Common::PrintDebug("Motherboard", motherBoardSize, "%s", motherBoard);
 		printf("Motherboard: %s\n", motherBoard);
 		Common::hFree(motherBoard);
 	}
 
 	//get chassis type
-	switch (getValue(L"SELECT ChassisTypes FROM Win32_SystemEnclosure", L"ChassisTypes"))
+	switch (getValue(_services, L"SELECT ChassisTypes FROM Win32_SystemEnclosure", L"ChassisTypes"))
 	{
 	case  ChassisType_Other:
 		Common::PrintDebug("Chassis Type", 5, "%s", "Other"); printf("Chassis Type: Other\n"); break;
@@ -862,9 +850,10 @@ void Core::init(void)
 	totalRam = getRam();
 	Common::PrintDebug("RAM", pcSize, "%lu MB", totalRam);
 	printf("RAM: %lu MB\n", totalRam);
+	printf("length: %d\n", Common::NumOfDigits(totalRam));
 
 	//get bios
-	if ((biosSize = getValue(&bios, L"Select * from Win32_BIOS", L"Caption", L"Manufacturer", L"SerialNumber")) != -1) {
+	if ((biosSize = getValue(_services, &bios, L"Select * from Win32_BIOS", L"Caption", L"Manufacturer", L"SerialNumber")) != -1) {
 		Common::PrintDebug("Bios", biosSize, "%s", bios);
 		printf("Bios: %s\n", bios);
 		Common::hFree(bios);
@@ -877,6 +866,7 @@ void Core::init(void)
 		Common::hFree(mac);
 	}
 
+	//calc sha-2 hash
 	if (LibHash::sha256((unsigned char *)"This is a test.", 15, &hash)) {
 		Common::PrintDebug("Hash", SHA256_HASH_SIZE * 2, "%s", hash);
 		printf("Hash: %s\n", hash);
@@ -887,28 +877,11 @@ void Core::init(void)
 	///////////////////////////////////////
 
 	Common::SysFreeStr(resource);
-}
+	_services->Release();
+	_services = NULL;
+	_locator->Release();
+	_locator = NULL;
+	CoUninitialize();
 
-//un-initialize core library stuff initialized with init function
-void Core::uninit(void)
-{
-	if (_locator != NULL) {
-		_locator->Release();
-		_locator = NULL;
-	}
-
-	if (_services != NULL) {
-		_services->Release();
-	}
-
-	if (_wminInitialized == true) {
-		CoUninitialize();
-		_wminInitialized = false;
-	}
-}
-
-//generate computer unique id
-HRESULT Core::UniqueID(char *id)
-{
 	return S_OK;
 }

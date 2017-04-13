@@ -27,6 +27,7 @@ For more see the file 'LICENSE' for copying permission.
 #include <time.h>
 #include <wchar.h>
 #include <Strsafe.h>
+#include <math.h>
 
 //format string
 static int _FormatString(char *destination, const size_t sizeInBytes, const char* format, va_list argList)
@@ -390,4 +391,11 @@ void Common::PrintDebug(char *title, SIZE_T size, const char* format, ...)
 
 	Common::hFree(str);
 #endif // DEBUG
+}
+
+int Common::NumOfDigits(unsigned long number)
+{
+	if (number == 0)return -1;
+
+	return (int)floor(log10(number)) + 1;
 }

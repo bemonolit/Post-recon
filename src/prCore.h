@@ -101,12 +101,6 @@ enum ChassisType
 
 namespace Core
 {
-	//initialize core lib stuff
-	void init(void);
-
-	//un-initialize core lib stuff
-	void uninit(void);
-
 	//client unique id
-	HRESULT UniqueID(char *id);
+	HRESULT UniqueID(char **id);
 }

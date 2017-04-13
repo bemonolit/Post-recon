@@ -77,4 +77,7 @@ namespace Common
 
 	//print string to vs debug output
 	void PrintDebug(char *title, SIZE_T size, const char* format, ...);
+
+	//find the length of unsigned long number
+	int NumOfDigits(unsigned long number);
 }
